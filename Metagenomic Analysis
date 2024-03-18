@@ -1,0 +1,172 @@
+if(!require(vegan)){install.packages("vegan"); libary(vegan)}
+if(!require(reshape)){install.packages("reshape"); libary(reshape)}
+if(!require(ggplot2)){install.packages("ggplot2"); libary(ggplot2)}
+if(!require(scales)){install.packages("scales"); libary(scales)}
+if(!require(ape)){install.packages("ape"); libary(ape)}
+if(!require(MASS)){install.packages("MASS"); libary(MASS)}
+## if(!require(_packege_)){install.packages("_packege_"); libary(_packege_)}
+################## SCRIPT Faria et al. (2018) ###########################
+
+pacotes.raster  <-  c("vegan","reshape","ggplot2","scales","ape","MASS")
+options(rgl.debug = TRUE)
+
+if(sum(as.numeric(!pacotes.raster %in% installed.packages())) != 0){
+  instalador  <-  pacotes.raster[!pacotes.raster %in% installed.packages()]
+  for(i in 1:length(instalador)) {
+    install.packages(instalador, dependencies = T)
+    break()}
+  sapply(pacotes.raster, require, character = T) 
+} else {
+  sapply(pacotes.raster, require, character = T) 
+}
+
+## Importing data. Aqui carregaremos as tabelas necessárias para as análises.
+multivariada  <-  read.csv2("Rinput.csv", row.names=1) # Matriz de OTUS ("metabarcoding genera")
+str(multivariada) #data structure checking
+
+nema.morfo <- read.csv2("nema_morfo.csv") # Matrix of nematodes genera ("morphology genera")
+str(nema.morfo) #data structure checking
+
+S  <-  specnumber(multivariada) # OTUs richness (genera level, all phyla included)
+
+S1  <-  specnumber(nema.morfo[,4:62]) # Morphology richness (only nematode genera)
+
+factorsMeta <- read.csv2("envi_meta.csv") #enviromental data for metabarcoding 
+str(factorsMeta) #data structure checking
+
+factorsMN <- read.csv2("envi_morfo_nema.csv") #enviromental data for morphology 
+str(factorsMN) #data structure checking
+
+## Curva de rarefação
+## Metabarcoding curves
+sp1  <-  specaccum(multivariada, method= "rarefaction", permutations = 1000) 
+plot(sp1, col="black", ci.lty=0, lwd=2, ylim=c(0,150), xlab="Number of samples",ylab="Number of genera OTUs")
+
+estimate <- poolaccum(multivariada, permutations = 999)
+estimate
+
+lines(rowMeans(estimate$chao), col="purple", lwd=2) 
+lines(rowMeans(estimate$jack1),col="blue", lwd=2)
+lines(rowMeans(estimate$jack2),col="red", lwd=2)
+lines(rowMeans(estimate$boot),col="green", lwd=2)
+
+## Calculating the percentage of the number of genera found per the number of expected genera
+rChao  <-  115/131 # total/Chao
+rChao
+rJ1  <-  115/140 # total/Jackknife 1
+rJ1
+rJ2  <-  115/147 # total/Jackknife 2
+rJ2
+rB  <-  115/127 # total/Boostraping
+rB
+
+## Percentage of OTUs per phylum for each sample 
+
+dat  <-  read.table(text = "s52 s54 s71 s74 s93 s94 s112 s142 All
+                          Phylum_Nematoda 20 26 39 34 32 27 24 39 419
+                          Phylum_Arthropoda 9 5 8 9 12 11 17 6 122
+                          Phylum_Gnathostomulida 2 1 0 0 0 0 0 1 7
+                          Phylum_Annelida 3 4 5 11 8 11 15 7 106
+                          Phylum_Gastrotricha 3 2 1 2 4 2 4 4 36
+                          Phylum_Platyhelminthes 4 2 7 7 3 2 4 3 53
+                          Phylum_Xenacoelomorpha 2 0 0 0 0 0 0 1 4
+                          Phylum_Nemertea 1 0 1 1 0 0 0 1 6
+                          Phylum_Mollusca 0 1 0 2 0 2 0 1 10
+                          Phylum_Tardigrada 0 0 1 0 0 0 0 0 1
+                          Phylum_Kinorhyncha 0 0 0 0 1 1 0 0 4",sep = "",header = TRUE)
+
+dat
+datm  <-  melt(cbind(dat, Group = rownames(dat)), id.vars = c('Group'))
+
+ggplot(datm,aes(x = variable, y = value,fill = Group)) + 
+  geom_bar(position = "fill",stat = "identity") + 
+  scale_y_continuous(labels = percent_format()) + scale_fill_brewer(palette="Set3")
+
+
+############################ Nematoda diversity ###############################
+###############################################################################
+
+## Comparing the nematode diversity found using morphology (nema.morfo), and the  
+## nematode diversity found with metabarcoding (nema.neta)
+multi_nemas <- read.csv2("nemas_tudo.csv", row.names = 1)
+
+multi_nemas1 <- read.csv2("nema_meta_morfo.csv")
+str(multi_nemas1)
+
+nema.meta  <-  subset(multi_nemas1, estudo=="Meta") 
+nema.morfo  <-  subset(multi_nemas1, estudo=="Morfo") 
+
+nema.meta[,-1:-3]->nema.meta
+str(nema.meta)
+nema.morfo[,-1:-3]->nema.morfo
+str(nema.morfo)
+
+sp1  <-  specaccum(multivariada, method= "rarefaction", permutations = 1000)
+spME  <-  specaccum(nema.meta, method= "rarefaction", permutations = 1000)
+spMO  <-  specaccum(nema.morfo, method= "rarefaction", permutations = 1000)
+SpN  <-  specaccum(multi_nemas, method= "rarefaction", permutations = 1000)
+
+## Confronting methods morphology x metabarcoding
+plot(spME, col="black", ci.lty=0, lwd=2, xlim=c(0,25), ylim=c(0,150), 
+     xlab="Number of samples",ylab="Number of genera")
+
+lines(spMO, col="red",ci.lty=0, lwd=2)
+
+## RDA metabarcoding
+
+factors1 <- factorsMeta[,-2] ##variáveis ambientais para cada ponto amostral
+str(factors1) ## lista as variáveis sendo analisadas
+abio.std <- decostand(factors1,"standardize") ##padroniza os dados
+abio.std
+bio.logMeta <- log(multivariada+1) ## padroniza para base logarítmica
+
+rda(bio.logMeta ~ AM_M + SORTING_DP + bac.min + NANO_M + orb.vel.max, data = abio.std)->rda.res1Meta
+rda(bio.logMeta ~ AM_M + SORTING_DP + bac.min , data = abio.std) -> rda.res2Meta
+
+summary(rda.res1Meta)
+summary(rda.res2Meta) 
+
+par(mfrow=c(1,1))
+plot(rda.res2Meta, scaling=1) ## variáveis explicativas terão sua média subtraída e divididas pelo desvio padrão antes de plotar 
+plot(rda.res2Meta, scaling=2) ## variáveis explicativas serão divididas pelo valor máximo absoluto antes de plotar
+
+
+plot(rda.res2Meta, scaling=1, display = c("species", "cn"), type = "n",
+     xlab = "RDA1 (14.1%; 39%)", ylab = "RDA2 (12.5%; 35%)")
+points(rda.res2Meta, display = "sp", scaling=1, col = c(rep( "chartreuse3", 54), rep("khaki", 29), rep("coral3", 1), 
+                                                        rep("aquamarine3", 5), rep("darkviolet", 1), rep("gray73", 17), 
+                                                        rep("blue1", 1), rep("deeppink", 2), rep("tan1", 3), rep("slateblue", 1), rep("skyblue", 1) ), cex=0.8, font=2)
+text(rda.res2Meta, display = "sites", scaling=1)
+text(rda.res2Meta, display = "bp", head.arrow = 0.08, labels = c("MS", "SORT", "BAC MIN"),
+     col = "gray45", lwd = 2)
+
+anova(rda.res2Meta, by = "axis")
+
+
+## RDA morphology 
+str(factorsMN)
+factorsMN[,-1]->factorsMN1
+str(factorsMN1)
+decostand(factorsMN1,"standardize")->abio.stdMor
+str(abio.stdMor)
+log(nema.morfo+1)->bio.logMor
+str(bio.logMor)
+
+
+rda.res2Mor <- rda(bio.logMor ~ am + sorting + bac, data = abio.stdMor, na.action = na.omit) 
+
+summary(rda.res2Mor)
+
+par(mfrow=c(1,1))
+plot(rda.res2Mor, scaling=1)
+plot(rda.res2Mor, scaling=2)
+
+plot(rda.res2Mor, scaling=1, display = c("species", "cn"), type = "n",
+     xlab = "RDA1 (18%; 60%)", ylab = "RDA2 (7%; 25%)")
+text(rda.res2Mor, display = "sp", scaling=1, col = "lightgreen", cex=0.8, font=4)
+text(rda.res2Mor, display = "sites", scaling=1)
+text(rda.res2Mor, display = "bp", head.arrow = 0.08, labels = c("MS", "SORT", "BAC"),
+     col = "gray45", lwd = 2)
+anova(rda.res2Mor, by = "axis")
+
+#################################### END ####################################
