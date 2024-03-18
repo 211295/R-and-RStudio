@@ -1,0 +1,67 @@
+echo "# R-and-RStudio" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/211295/R-and-RStudio.git
+git push -u origin main
+
+if(!require(tidyverse)){install.packages("tidyverse");library(tideverse)}
+if(!require(lubridate)){install.packages("lubridate");library(lubridate)}
+if(!require(plotrix)){install.packages("plotrix");library(plotrix)}
+if(!require(readr)){install.packages("readr");library(readr)}
+install.packages("ggplot2")
+
+data <- read_delim("Mountium.survive.csv", delim = ",")
+
+tidy_data <- data %>%
+  pivot_longer(cols = c("X1", "X2", "X3", "X4", "X5"),
+               names_to = "replica", values_to = "sobreviventes") %>%
+  mutate(data = as_date(dmy(data))) %>%
+  mutate(DPI = if_else(especie == "bocquete" | especie == "melanogaster",
+                       yday(data) - 291,
+                       yday(data) - 292)) %>%
+  mutate(tratamento = case_when(tratamento == "V" ~ "FHV", tratamento == "C" ~ "Ringer")) %>%
+  mutate(wolbachia = case_when(wolbachia == "P" ~ "W+", wolbachia == "N" ~"W-")) %>%
+  mutate(catg = str_c(especie, wolbachia, tratamento)) 
+
+
+summary <- tidy_data %>%
+  group_by(especie, wolbachia, tratamento, DPI) %>%
+  summarise(media = mean(sobreviventes),
+            erro_padrao = std.error(sobreviventes)) %>% 
+  mutate(catg = str_c(especie, wolbachia, tratamento)) %>%
+  ungroup() 
+
+prop_data <- summary %>%
+  mutate(first_media = case_when(
+    catg == "bocqueteW+FHV" ~ subset(summary, catg == "bocqueteW+FHV" & DPI == 1)[["media"]],
+    catg == "bocqueteW+Ringer" ~ subset(summary, catg == "bocqueteW+Ringer" & DPI == 1)[["media"]],
+    catg == "bocqueteW-FHV" ~ subset(summary, catg == "bocqueteW-FHV" & DPI == 1)[["media"]],
+    catg == "bocqueteW-Ringer" ~ subset(summary, catg == "bocqueteW-Ringer" & DPI == 1)[["media"]],
+    catg == "melanogasterW+FHV" ~ subset(summary, catg == "melanogasterW+FHV" & DPI == 1)[["media"]],
+    catg == "melanogasterW+Ringer" ~ subset(summary, catg == "melanogasterW+Ringer" & DPI == 1)[["media"]],
+    catg == "melanogasterW-FHV" ~ subset(summary, catg == "melanogasterW-FHV" & DPI == 1)[["media"]],
+    catg == "melanogasterW-Ringer" ~ subset(summary, catg == "melanogasterW-Ringer" & DPI == 1)[["media"]],
+    catg == "baimaiW+FHV" ~ subset(summary, catg == "baimaiW+FHV" & DPI == 1)[["media"]],
+    catg == "baimaiW+Ringer" ~ subset(summary, catg == "baimaiW+Ringer" & DPI == 1)[["media"]],
+    catg == "baimaiW-FHV" ~ subset(summary, catg == "baimaiW-FHV" & DPI == 1)[["media"]],
+    catg == "baimaiW-Ringer" ~ subset(summary, catg == "baimaiW-Ringer" & DPI == 1)[["media"]],
+    catg == "triaurariaW+FHV" ~ subset(summary, catg == "triaurariaW+FHV" & DPI == 1)[["media"]],
+    catg == "triaurariaW+Ringer" ~ subset(summary, catg == "triaurariaW+Ringer" & DPI == 1)[["media"]],
+    catg == "triaurariaW-FHV" ~ subset(summary, catg == "triaurariaW-FHV" & DPI == 1)[["media"]],
+    catg == "triaurariaW-Ringer" ~ subset(summary, catg == "triaurariaW-Ringer" & DPI == 1)[["media"]],
+    TRUE ~ media )) %>%
+  mutate(prop_media = (media*100)/first_media,
+         prop_erro = (erro_padrao*100)/first_media)
+
+prop_data %>%  
+  select(especie, wolbachia, tratamento, prop_media, prop_erro, DPI) %>%
+  mutate(catg2 = str_c(wolbachia, tratamento, sep = " ")) %>%
+  ggplot(aes(x = DPI, y = prop_media, color = catg2)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin = prop_media - prop_erro, ymax = prop_media + prop_erro)) +
+  facet_wrap(~ especie, nrow = 2) +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(y = "Survival (%)", color = NULL)
