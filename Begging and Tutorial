@@ -2,68 +2,68 @@
 ### some basic R language:
 ### files within R are called 'objects', exemple:
 object_x <- 10**3/(45*5-45) # to run, use "Ctrl + r" or "Enter + r" or  the "run" button up this box
-object_y <- "hello" # for text (STRINGS), use quotation marks ("" or '')
-print(object_x)
-print(object_y)
+object_y <- "You need study more" # for text (STRINGS), use quotation marks ("" or '')
+print(object_x); print(object_y)
+
 ### functions use arguments within parenthesis
 object_z <- c(1, 2, 3, 5, 6, 9, 120) # function "c()" is used for creating lists
-object_z
-
-# another example
-# function "list()" is similar to function "c()" (also used for lists)
+### function "list()" is similar to function "c()" (also used for lists) but have a little diference
+### if you print you can see the function LIST is have more details about the position of the element
+### [[j]] = column
+### [i] X = line with the X information
 object_w <- list(1, 2, 3, 5, 6, 9, 120)
-object_w
+print(object_z); print(object_w)
 
-## objects in R come in different "classes"
-# use function"class()" to check
+### objects in R come in different "classes" use function "class()" to check
 class(object_x)
 class(object_y)
 class(object_z)
 class(object_w)
 
-## use str function to inspect "inside" objects (to inspect its structure)
+### use str() function to inspect "inside" objects (to inspect its STRucture)
 str(object_x)
 str(object_y)
 str(object_z)
 str(object_w)
 
-## use $ symbol to show elements of an object
-object_a <- data.frame("column_1"=c(1 ,2 , 3, 4, 5),
-                       "column_2" = c(6, 7, 8, 9, 10),
-                       "column_3" = c(11, 12, 13, 14, 15))
+### use $ symbol to show elements of an data.frame object (data.frame is a class) 
+### YOU CANT MAKE ARGUMENTS WITH DIFERENT NUMBERS OFS LINES IN THE COLUMNS... 
+object_a = data.frame("column_1"= c(1 ,2 , 3, 4, 5, 10, 5*8),
+                       "column_2" = c(6, 7, 8, 9,"safe", "shit"),
+                       "column_3" = c(11, 12, 13, 14, 15, 4/2, 3**8))
+object_aa = list(c(1,2,4,5,10,5*8),c(6,7,8,9,"safe","shit"),c(11,12,13,14,15,4/2,3**8))
 
-object_a
-
+### use $ in objetct to select especific part of the object
 object_a$column_1
 object_a$column_2
 object_a$column_3
-
 
 object_b <- data.frame("column_1" = object_a$column_1,
                        "column_2" = object_a$column_2,
                        "column_3" = object_a$column_3)
 
-object_b
+print(object_a); print(object_b); print(object_aa)
 
-# compare:
-object_a
-object_b
+### compare:
 class(object_a)
 class(object_b)
 str(object_a)
 str(object_a)
 
-## the function "data.frame()" can also be used to convert objects of other
-# classes to class "data frame" this can be useful for getting your data in the
-# right format for some functions
-
-# example:
+### the function "data.frame()" can also be used to convert objects of other
+### classes to class "data frame" this can be useful for getting your data in the
+### right format for some functions
+# example
 object_c <- data.frame(object_w)
-
-# compare:
-object_c
-object_w
+object_c2 = dataframe(object_a)
+object_c3 = list(object_a)
+object_c4 = c(object_a)
+### compare
 class(object_c)
-class(object_w)
+class(object_c2)
+class(object_c3)
+class(object_c4)
 str(object_c)
-str(object_w)
+str(object_c2)
+str(object_c3)
+str(object_c4)
