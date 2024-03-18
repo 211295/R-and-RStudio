@@ -1,0 +1,572 @@
+### bit.ly/ecoevo
+if(!require(evolqg)){install.packages("evolqg"); library(evolqg)}
+if(!require(ape)){install.packages("ape"); library(ape)}
+set.seed(42)
+library(ggplot2)
+library(mvtnorm)
+library(reshape2)
+if(!require(viridis)) install.packages("viridis")
+library(viridis)
+
+###Carregando pacotes para os graficos
+list_pkgs <- c("ggplot2", "GGally", "reshape2")
+new_pkgs <- list_pkgs[!(list_pkgs %in% installed.packages()[,"Package"])]
+if(length(new_pkgs) > 0){ install.packages(new_pkgs) }
+
+library(evolqg)
+library(GGally)
+data(dentus)
+dentus_A = dentus[ dentus$species == "A", ]
+scale_dentus_A = as.data.frame(scale(dentus[dentus$species == "A",1:4], scale = FALSE))
+dentus_B = dentus[ dentus$species == "B", ]
+scale_dentus_B = as.data.frame(scale(dentus[dentus$species == "B",1:4], scale = FALSE))
+dentus_C = dentus[ dentus$species == "C", ]
+scale_dentus_C = as.data.frame(scale(dentus[dentus$species == "C",1:4], scale = FALSE))
+dentus_D = dentus[ dentus$species == "D", ]
+scale_dentus_D = as.data.frame(scale(dentus[dentus$species == "D",1:4], scale = FALSE))
+dentus_E = dentus[ dentus$species == "E", ]
+scale_dentus_E = as.data.frame(scale(dentus[dentus$species == "E",1:4], scale = FALSE))
+
+#Separar uma parte dos dados da tabela, filtrando a partir das espécies 
+#dentus_AB = dentus[dentus$species == "A" | dentus$species == "B",]
+dentus_AC = dentus[dentus$species == "A" | dentus$species == "C",]
+#dentus_AD = dentus[dentus$species == "A" | dentus$species == "D",]
+#dentus_AE = dentus[dentus$species == "A" | dentus$species == "E",]
+
+#dentus_BC = dentus[dentus$species == "B" | dentus$species == "C",]
+dentus_BD = dentus[dentus$species == "B" | dentus$species == "D",]
+#dentus_BE = dentus[dentus$species == "B" | dentus$species == "E",]
+
+#dentus_CD = dentus[dentus$species == "C" | dentus$species == "D",]
+#dentus_CE = dentus[dentus$species == "C" | dentus$species == "E",]
+
+#dentus_DE = dentus[dentus$species == "D" | dentus$species == "E",]
+
+dentus_AC_BD = dentus[dentus$species == "A" | dentus$species == "C" | dentus$species == "B" | dentus$species == "D",]
+
+### todas as medias 
+sapply(dentus[,1:4], mean)
+mean_S = sapply(dentus[,1:4], mean)
+mean_A = sapply(dentus[dentus$species=="A", 1:4], mean)
+mean_B = sapply(dentus[dentus$species=="B", 1:4], mean)
+mean_C = sapply(dentus[dentus$species=="C", 1:4], mean)
+mean_D = sapply(dentus[dentus$species=="D", 1:4], mean)
+mean_E = sapply(dentus[dentus$species=="E", 1:4], mean)
+### Médias por espécies
+dentus_means = aggregate(dentus[,1:4], list(especie = dentus[,5]), mean)
+####                  OR
+dentus_means = ddply(dentus, "species", numcolwise(mean))
+###                   OR  
+dentus_means = daply(dentus, .(species), function(x) colMeans(x[,1:4]))
+mean_AC = means[dentus[dentus$species == "A" | dentus$species == "C", 5],]
+mean_BD = means[dentus[dentus$species == "B "| dentus$species == "D", 5],]
+mean_AC_BD = means[dentus[dentus$species == "A" | dentus$species == "C" | dentus$species == "B "| dentus$species == "D", 5 ],]
+
+### todas as variações
+var_A = sapply(dentus[dentus$species=="A", 1:4], var)
+var_B = sapply(dentus[dentus$species=="B", 1:4], var)
+var_C = sapply(dentus[dentus$species=="C", 1:4], var)
+var_D = sapply(dentus[dentus$species=="D", 1:4], var)
+var_E = sapply(dentus[dentus$species=="E", 1:4], var)
+aggregate(dentus[,1:4], list(especie = dentus[,5]), var)
+var_S = sapply(dentus[,1:4], var)
+sapply(dentus[,1:4], var)
+
+### todos os desvios padrões
+sd_A = sapply(dentus[dentus$species=="A", 1:4], sd)
+sd_B = sapply(dentus[dentus$species=="B", 1:4], sd)
+sd_C = sapply(dentus[dentus$species=="C", 1:4], sd)
+sd_D = sapply(dentus[dentus$species=="D", 1:4], sd)
+sd_E = sapply(dentus[dentus$species=="E", 1:4], sd)
+aggregate(dentus[,1:4], list(especie= dentus[,5]), sd)
+sd_S = sapply(dentus[,1:4], sd)
+sapply(dentus[,1:4], sd)
+
+###Calculo do coeficiete de variação
+sd_S/mean_S
+sd_S = sapply(dentus[,1:4], sd)
+mean_S = sapply(dentus[,1:4], mean)
+cv = function(x) sd(x)/mean(x)
+sd_CV = sapply(dentus[,1:4], cv)
+
+### covariação entre todos os caracteres (geral)
+cov_dentus = cov(dentus[, 1:4])
+cov(dentus$humerus, dentus$ulna)
+cov_humerus_ulna = cov(dentus$humerus, dentus$ulna)
+cov(dentus$femur, dentus$tibia)
+cov_femur_tibia = cov(dentus$femur, dentus$tibia)
+
+# Vamos criar uma lista com todas as nossas matrizes de uma vez só:
+cov_matrices = dlply(dentus, .(species), function(x) cov(x[,1:4]))
+
+# Agora podemos acessar cada matriz individualmente 
+cov_matrices$A
+cov_A = cov(dentus[ dentus$species == "A", 1:4])
+cov_matrices$B
+cov_B = cov(dentus[ dentus$species == "B", 1:4])
+cov_matrices$C
+cov_C = cov(dentus[ dentus$species == "C", 1:4])
+cov_matrices$D
+cov_D = cov(dentus[ dentus$species == "D", 1:4])
+cov_matrices$E
+cov_E = cov(dentus[ dentus$species == "E", 1:4])
+
+### Matriz de covariancia para dois caracteres = Entender os padroes macroevolutivos e as direções de maior variação PCs
+cov_dentus = cov(dentus[,1:4])
+cov_hu_A = cov(dentus_A[,1:2])
+cov_ft_A = cov(dentus_A[,3:4])
+cov_hu_B = cov(dentus_A[,1:2])
+cov_ft_B = cov(dentus_A[,3:4])
+cov_hu_C = cov(dentus_A[,1:2])
+cov_ft_C = cov(dentus_A[,3:4])
+cov_hu_D = cov(dentus_A[,1:2])
+cov_ft_D = cov(dentus_A[,3:4])
+cov_hu_E = cov(dentus_A[,1:2])
+cov_ft_E = cov(dentus_A[,3:4])
+
+### Vamos usar a função eigen na matriz de covariância cov_hu
+### O vectors é uma matriz 2×2, e cada coluna corresponde a um PC. O número de 
+### PCs é sempre o mesmo que o numero de eixos originais, afinal, eu precisava 
+### de 2 eixos para descrever os dados e uma rotação não vai alterar isso
+### Agora o vectors é uma matriz 4×4 (começamos com 4 eixos), e cada coluna
+### corresponde a um PC.
+PC_cov_dentus = eigen(cov_dentus)
+
+PCs_cov_A = eigen(cov_matrices$A)
+### OR PCs_cov_A = eigen(cov_A)
+PC_cov_hu_A = eigen(cov_hu_A)
+PC_cov_ft_A = eigen(cov_ft_A)
+
+PCs_cov_B = eigen(cov_matrices$B)
+### OR PCs_cov_B = eigen(cov_B)
+PC_cov_hu_B = eigen(cov_hu_B)
+PC_cov_ft_B = eigen(cov_ft_B)
+
+PCs_cov_C = eigen(cov_matrices$C)
+### OR PCs_cov_C = eigen(cov_C)
+PC_cov_hu_C = eigen(cov_hu_C)
+PC_cov_ft_C = eigen(cov_ft_C)
+
+PCs_cov_D = eigen(cov_matrices$D)
+### OR PCs_cov_D = eigen(cov_D)
+PC_cov_hu_D = eigen(cov_hu_D)
+PC_cov_ft_D = eigen(cov_ft_D)
+
+PCs_cov_E = eigen(cov_matrices$E)
+### OR PCs_cov_E = eigen(cov_E)
+PC_cov_hu_E = eigen(cov_hu_E)
+PC_cov_ft_E = eigen(cov_ft_E)
+
+# Primeiro usamos o operador $ para pegar a matriz de PCs (vectors),
+# depois o operador [,1] para pegar a primeira coluna da matriz de PCs
+### TENHO DUVIDA NESSES PCS....... PERGUNTAR OQ SIGNIFICA CADA UM...
+
+PCs_cov_A$vectors[,1]
+PCs_cov_A$vectors[,2]
+PCs_cov_A$vectors[,3]
+PCs_cov_A$vectors[,4]
+PC1_hu_A = PC_cov_hu_A$vectors[,1]
+PC2_hu_A = PC_cov_hu_A$vectors[,2]
+PC1_ft_A = PC_cov_ft_A$vectors[,1]
+PC2_ft_A = PC_cov_ft_A$vectors[,2]
+PCs_cov_B$vectors[,1]
+PCs_cov_B$vectors[,2]
+PCs_cov_B$vectors[,3]
+PCs_cov_B$vectors[,4]
+PC1_hu_B = PC_cov_hu_B$vectors[,1]
+PC2_hu_B = PC_cov_hu_B$vectors[,2]
+PC1_ft_B = PC_cov_ft_B$vectors[,1]
+PC2_ft_B = PC_cov_ft_B$vectors[,2]
+PCs_cov_C$vectors[,1]
+PCs_cov_C$vectors[,2]
+PCs_cov_C$vectors[,3]
+PCs_cov_C$vectors[,4]
+PC1_hu_C = PC_cov_hu_C$vectors[,1]
+PC2_hu_C = PC_cov_hu_C$vectors[,2]
+PC1_ft_C = PC_cov_ft_C$vectors[,1]
+PC2_ft_C = PC_cov_ft_C$vectors[,2]
+PCs_cov_D$vectors[,1]
+PCs_cov_D$vectors[,2]
+PCs_cov_D$vectors[,3]
+PCs_cov_D$vectors[,4]
+PC1_hu_D = PC_cov_hu_D$vectors[,1]
+PC2_hu_D = PC_cov_hu_D$vectors[,2]
+PC1_ft_D = PC_cov_ft_D$vectors[,1]
+PC2_ft_D = PC_cov_ft_D$vectors[,2]
+PCs_cov_E$vectors[,1]
+PCs_cov_E$vectors[,2]
+PCs_cov_E$vectors[,3]
+PCs_cov_E$vectors[,4]
+PC1_hu_E = PC_cov_hu_E$vectors[,1]
+PC2_hu_E = PC_cov_hu_E$vectors[,2]
+PC1_ft_E = PC_cov_ft_E$vectors[,1]
+PC2_ft_E = PC_cov_ft_E$vectors[,2]
+
+### Primeiro e segundo PCs das matrizes ancestrais
+all_pc1 = llply(all_cov_matrices, function(x) eigen(x)$vectors[,1])
+all_pc2 = llply(all_cov_matrices, function(x) eigen(x)$vectors[,2])
+all_pc1$root
+all_pc2$root
+### Agora que você tem os PCs e os Δz, sabe fazer uma correlação de vetor e sabe como interpretar as correlações, podemos juntar tudo isso!
+### Calcule e interprete as correlações entre Δz e PC1 e PC2 ao longo da filogenia.
+
+### Correlação e suas matrizes associações do caracter entre caracteres
+cor_A = cor(dentus [dentus$species == "A", 1:4])
+cor_B = cor(dentus [dentus$species == "B", 1:4])
+cor_C = cor(dentus [dentus$species == "C", 1:4])
+cor_D = cor(dentus [dentus$species == "D", 1:4])
+cor_E = cor(dentus [dentus$species == "E", 1:4])
+plotMatrix(cor_A)
+plotMatrix(cor_B)
+plotMatrix(cor_C)
+plotMatrix(cor_D)
+plotMatrix(cor_E)
+
+###correlação entre todos os caracteres (geral)
+cor(dentus$humerus, dentus$ulna)
+cor_humerus_ulna = cor(dentus$humerus, dentus$ulna)
+cor(dentus$femur, dentus$tibia)
+cor_femur_tibia = cor(dentus$femur, dentus$tibia)
+
+### Rotacionando os dados dos PCs
+scale_dentus_A_rot_PCs = as.matrix(scale_dentus_A[,1:4]) %*% PCs_cov_A$vectors
+scale_dentus_A_rot_PCs_hu = data.frame(as.matrix(scale_dentus_A[,1:2]) %*% PC_cov_hu_A$vectors)
+scale_dentus_A_rot_PCs_ft = data.frame(as.matrix(scale_dentus_A[,3:4]) %*% PC_cov_ft_A$vectors)
+scale_dentus_B_rot_PCs = as.matrix(scale_dentus_B[,1:4]) %*% PCs_cov_B$vectors
+scale_dentus_B_rot_PCs_hu = data.frame(as.matrix(scale_dentus_B[,1:2]) %*% PC_cov_hu_B$vectors)
+scale_dentus_B_rot_PCs_ft = data.frame(as.matrix(scale_dentus_B[,3:4]) %*% PC_cov_ft_B$vectors)
+scale_dentus_C_rot_PCs = as.matrix(scale_dentus_C[,1:4]) %*% PCs_cov_C$vectors
+scale_dentus_C_rot_PCs_hu = data.frame(as.matrix(scale_dentus_C[,1:2]) %*% PC_cov_hu_C$vectors)
+scale_dentus_C_rot_PCs_ft = data.frame(as.matrix(scale_dentus_C[,3:4]) %*% PC_cov_ft_C$vectors)
+scale_dentus_D_rot_PCs = as.matrix(scale_dentus_D[,1:4]) %*% PCs_cov_D$vectors
+scale_dentus_D_rot_PCs_hu = data.frame(as.matrix(scale_dentus_D[,1:2]) %*% PC_cov_hu_D$vectors)
+scale_dentus_D_rot_PCs_ft = data.frame(as.matrix(scale_dentus_D[,3:4]) %*% PC_cov_ft_D$vectors)
+scale_dentus_E_rot_PCs = as.matrix(scale_dentus_E[,1:4]) %*% PCs_cov_E$vectors
+scale_dentus_E_rot_PCs_hu = data.frame(as.matrix(scale_dentus_E[,1:2]) %*% PC_cov_hu_E$vectors)
+scale_dentus_E_rot_PCs_ft = data.frame(as.matrix(scale_dentus_E[,3:4]) %*% PC_cov_ft_E$vectors)
+
+###Primeiras linhas dos dados rotacionados função HEAD
+head(scale_dentus_A_rot_PCs)
+head(scale_dentus_B_rot_PCs)
+head(scale_dentus_C_rot_PCs)
+head(scale_dentus_D_rot_PCs)
+head(scale_dentus_E_rot_PCs)
+
+### Calculo da matriz de covariancia dos dados rotacionados... PQ 10 E NÃO 60?
+### a analise de componentes principais faz: encontra eixos onde nossos dados não 
+### são correlacionados. 
+### A diagonal, as variâncias dos dados rotacionados. Compare essas variâncias com 
+### os valores na parte “values” da saida da função eigen().
+
+round(cov(scale_dentus_A_rot_PCs), 10)
+round(cov(scale_dentus_A_rot_PCs_hu), 10)
+round(cov(scale_dentus_A_rot_PCs_ft), 10)
+round(cov(scale_dentus_B_rot_PCs), 10)
+round(cov(scale_dentus_B_rot_PCs_hu), 10)
+round(cov(scale_dentus_B_rot_PCs_ft), 10)
+round(cov(scale_dentus_C_rot_PCs), 10)
+round(cov(scale_dentus_C_rot_PCs_hu), 10)
+round(cov(scale_dentus_C_rot_PCs_ft), 10)
+round(cov(scale_dentus_D_rot_PCs), 10)
+round(cov(scale_dentus_D_rot_PCs_hu), 10)
+round(cov(scale_dentus_D_rot_PCs_ft), 10)
+round(cov(scale_dentus_E_rot_PCs), 10)
+round(cov(scale_dentus_E_rot_PCs_hu), 10)
+round(cov(scale_dentus_E_rot_PCs_ft), 10)
+
+### LINHA DE MENOR RESISTENCIA EVOLUTIVA -> Como a magnitude da mudança evolutiva depende 
+### diretamente da presença de variação, a direção que acumula mais variação deve ser uma 
+### direção de mudança preferencial, inclusive enviezando a resposta à seleção em outras 
+### direções, e sendo portando uma linha de menor resistência à mudança evolutiva. A linha 
+### de menor resisência corresponde exatamente ao primeiro componente principal
+### Analise de PCA ()
+### var(dentus_A$humerus)+var(dentus_A$ulna)+var(dentus_A$tibia)+var(dentus_A$femur)
+### var(dentus_B$humerus)+var(dentus_B$ulna)+var(dentus_B$tibia)+var(dentus_B$femur)
+### var(dentus_C$humerus)+var(dentus_C$ulna)+var(dentus_C$tibia)+var(dentus_C$femur)
+### var(dentus_D$humerus)+var(dentus_D$ulna)+var(dentus_D$tibia)+var(dentus_D$femur)
+### var(dentus_E$humerus)+var(dentus_E$ulna)+var(dentus_E$tibia)+var(dentus_E$femur)
+
+### OR var(scale_dentus_A$humerus)+var(scale_dentus_A$ulna)+var(scale_dentus_A$tibia)+var(scale_dentus_A$femur)
+### OR sum(PCs_cov_A$valeus); sum(PCs_cov_B$values); sum(PCs_cov_C$valeus); sum(PCs_cov_D$values); sum(PCs_cov_E$valeus)
+### PQ NAO PODE USAR scale_dentus_A_rot_PCs = as.matrix(scale_dentus_A[,1:4] %*% PCs_cov_A$valeus
+### sum(scale_dentus_A_rot_PCs$valeus)
+
+
+### Reconstrução de Caracteres Ancestrais com base numa filogenia ja estabelecida
+### Parcimônia quadrada: Minimiza a mudança evolutiva quadrada ao longo da filogenia + Ignora os tamanhos de ramo.
+### Máxima verossimilhança: Encontra os estados ancestrais mais plausíveis, assumindo que a distribuição das médias das espécies é multivariada normal + Incorpora tamanho de ramo + Pode ser usado para estimar taxas evolutivas usando um modelo de evolução por movimento Browniano
+### VAMOS USAR MAXIMA VEROSSIMILHANÇA - media ponderada dos caracteres do terminal ponderado pelo comprimento do ramo
+TREE = "(E:3,((D:1,B:1):1,(C:1, A:1):1):1);"
+tree = read.tree(text = TREE)
+tree$tip.label = c("E", "D", "B", "C", "A")
+tree$node.label = c("root", "ABCD", "DB", "AC")
+plot(tree, show.node.label=TRUE)
+nodelabels()
+
+### Para fazer as estimativas ancestrais, precisamos calcular as médias atuais.
+### Cada coluna do objeto dentus_means contém as médias de um caráter para cada espécie.
+### A função de reconstrução de caracteres ancestrais do pacote ape usa esses valores e a arvore filogenética para fazer a reconstrução
+humerus_ancestral = ace(dentus_means$humerus, tree)
+ulna_ancestral = ace(dentus_means$ulna, tree)
+femur_ancestral = ace(dentus_means$femur, tree)
+tibia_ancestral = ace(dentus_means$tibia, tree)
+dentus_ancestral = sapply(dentus_means[2:5], function(x) ace(x, tree)$ace)
+dentus_ancestral_new = data.frame(species =  c("root", "ABCD", "DB", "AC"), dentus_ancestral)
+### Salvar a tabela em um arquivo: write.csv(dentus_means_ace, "meu_arquivo_de_medias.csv")
+### Transformar essa tabela numa lista: l_dentus = dlply(dentus_means_ace, .(species), numcolwise(identity))
+### Acessar as médias de qualquer ponto da filogenia usando o operador : l_dentus$root 
+### Podemos usar esse vetores de caracteres para calcular nossos vetores de mudança fenotípica ao longo da filogenia (DeltaZ)
+
+### ace são as estimativas propriamente ditas (Isso é um vetor com um valor para cada nó (6,7,8,9), que estão numerados); 
+### sigma2 é um parâmetro ligado à taxa de evolução sob um modelo de movimento browniano; 
+### CI95 são os intervalos de confiânça para as estimativas em cada nó
+humerus_ancestral$ace
+humerus_ancestral$sigma2
+humerus_ancestral$CI95
+ulna_ancestral$ace
+ulna_ancestral$sigma2
+ulna_ancestral$CI95
+femur_ancestral$ace
+femur_ancestral$sigma2
+femur_ancestral$CI95
+tibia_ancestral$ace
+tibia_ancestral$sigma2
+tibia_ancestral$CI95
+
+### Podemos ver na filogenia a quais nós correspondem esses números
+
+
+### A matriz do ancestral comum entre as espécies é dada pela ponderada entre as matrizes atuais
+###
+cov_matrix_AC = (60 * cov_matrices$A + 60 * cov_matrices$C)/120 
+CalculateMatrix(lm(as.matrix(dentus_AC[,1:4])~dentus_AC[,5]))
+
+cov_matrix_BD = (60 * cov_matrices$B + 60 * cov_matrices$D)/120
+CalculateMatrix(lm(as.matrix(dentus_BD[,1:4])~dentus_BD[,5]))
+
+### matrix ancestral do 
+cov_matrix_AC_BD = (120 * cov_matrix_AC + 120 * cov_matrix_BD)/240
+
+cov_matrix_ACBD_E = (240 * cov_matrix_AC_BD + 60 * cov_matrices$E)/300
+CalculateMatrix(lm(as.matrix(dentus[,1:4])~dentus$species))
+W = CalculateMatrix(lm(as.matrix(dentus[,1:4])~dentus$species))
+###            OR
+all_cov_matrices = PhyloW(tree, cov_matrices)
+attributes(all_cov_matrices)$split_labels = attributes(all_cov_matrices)$names
+all_cov_matrices$root
+
+### Linha de menor resistencia evolutiva saindo do nó ao ramo que sustenta as especies
+### vamos usar a Lista criada por: l_dentus = dlply(dentus_means_ace, .(species), numcolwise(identity))
+deltaZ_AC_A = l_dentus$A - l_dentus$AC
+deltaZ_AC_C = l_dentus$C - l_dentus$AC
+deltaZ_BD_D = l_dentus$D - l_dentus$DB
+deltaZ_BD_B = l_dentus$B - l_dentus$DB
+deltaZ_root_E = l_dentus$E - l_dentus
+deltaZ_root_ACBD = l_dentus$AC - l_dentus$ABCD
+deltaZ_root_BDAC = l_dentus$DB - l_dentus$ABCD
+
+### A ideia é que essa (cov_matrix_AC, cov_matrix_BD, cov_matrix_AC_BD) matriz é a mesma coisa que 
+### fazer a covariância normalmente, mas usando a média das espécies separadamente.
+### Vamos usar a formula de covariância diretamente, mas controlando para o número de graus de liberdade:
+# Essa correção pelos graus de liberdade é meio confusa, mas pense que a var()
+# vai tirar um grau de liberdade, mas a gente calculou duas médias,
+# então precisamos tirar outro!
+
+(119/(119-1)) * var(dentus_AC[,1:4] - mean_AC)
+(119/(119-1)) * var(dentus_BD[,1:4] - mean_BD)
+(119/(119-1)) * var(dentus_AC_BD[,1:4] - mean_AC_BD)
+
+### Correlação entre os caracteres especifico para cada grupo
+ggplot(dentus_A, aes(humerus, ulna))+geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_A, aes(femur, tibia)) + geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_B, aes(humerus, ulna))+geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_B, aes(femur, tibia)) + geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_C, aes(humerus, ulna))+geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_C, aes(femur, tibia)) + geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_D, aes(humerus, ulna))+geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_D, aes(femur, tibia)) + geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_E, aes(humerus, ulna))+geom_point()+coord_fixed()+theme_bw()
+ggplot(dentus_E, aes(femur, tibia)) + geom_point()+coord_fixed()+theme_bw()
+
+### Distribuilção por especies
+ggplot(melt(dentus), aes(value, group = species, fill = species)) + geom_histogram() + 
+  facet_wrap(~variable, scale = "free")
+
+### BoxPlot por especies
+ggplot(melt(dentus), aes(species, value, fill = species, group = interaction(species, variable))) + 
+  geom_boxplot() + 
+  facet_wrap(~variable, scale = "free")
+
+### BoxPlot mais refinado (viollon plot)
+ggplot(melt(dentus), aes(species, value, fill = species, group = interaction(species, variable))) + 
+  geom_violin() + 
+  facet_wrap(~variable, scale = "free")
+
+### Curvas de regreção 
+ggplot(dentus, aes(humerus, ulna, group = species, color = species)) + geom_point() +
+  geom_smooth(method = "lm", aes(group = species))
+ggplot(dentus, aes(femur, tibia, group = species, color = species)) + geom_point() + 
+  geom_smooth(method = "lm", aes(group = species))
+### pares de caracteres
+ggpairs(dentus, mapping = aes(color = species), 
+        columns = c("humerus", "ulna","femur", "tibia"))
+
+### Diagrama de regração 
+###ggplot(dentus, aes(femur, tibia)) + geom_point() + geom_smooth(method = "lm")
+ggplot(dentus, aes(femur, tibia)) +
+  annotate("rect", xmin = Inf, xmax = mean(dentus$femur),
+           ymin = Inf, ymax = mean(dentus$tibia), fill= "red", alpha = 0.5)  +
+  annotate("rect", xmin = -Inf, xmax = mean(dentus$femur),
+           ymin = -Inf, ymax = mean(dentus$tibia) , fill= "red", alpha = 0.5) +
+  annotate("rect", xmin = mean(dentus$femur), xmax = Inf,
+           ymin = mean(dentus$tibia), ymax = -Inf, fill= "green", alpha = 0.5) +
+  annotate("rect", xmin = mean(dentus$femur), xmax = -Inf,
+           ymin = Inf, ymax = mean(dentus$tibia), fill= "green", alpha = 0.5) +
+  geom_point() + theme_classic()
+### ggplot(dentus, aes(humerus, ulna)) + geom_point() + geom_smooth(method = "lm")
+ggplot(dentus, aes(humerus, ulna)) +
+  annotate("rect", xmin = Inf, xmax = mean(dentus$humerus),
+           ymin = Inf, ymax = mean(dentus$ulna), fill= "blue", alpha = 0.5)  +
+  annotate("rect", xmin = -Inf, xmax = mean(dentus$humerus),
+           ymin = -Inf, ymax = mean(dentus$ulna) , fill= "blue", alpha = 0.5) +
+  annotate("rect", xmin = mean(dentus$humerus), xmax = Inf,
+           ymin = mean(dentus$ulna), ymax = -Inf, fill= "yellow", alpha = 0.5) +
+  annotate("rect", xmin = mean(dentus$humerus), xmax = -Inf,
+           ymin = Inf, ymax = mean(dentus$ulna), fill= "yellow", alpha = 0.5) +
+  geom_point() + theme_classic()
+
+### PARA PLOTAR MATRIZES DE CORRELAÇÃO
+plotMatrix = function (corMat, file = NULL) {diag(corMat) = NA
+  n_traits = nrow(corMat)
+  myPalette <- viridis(50)
+## Se quiser uma paleta All American, use essa linha em vez da anterior
+myPalette = colorRampPalette(c("blue", "white", "red"))(n = 50)
+  m.rs = melt(corMat)
+  m.rs$Var1 = factor(m.rs$Var1, levels = m.rs$Var1[n_traits:1])
+  m.rs.position = m.rs
+  m.rs.position$Var1 = as.numeric(m.rs.position$Var1)
+  m.rs.position$Var2 = as.numeric(m.rs.position$Var2)
+  m.rs.position$value = round(m.rs.position$value, 2)
+  m.rs.position$value[is.na(m.rs.position$value)] = levels(m.rs$Var1)[n_traits:1]
+p = ggplot (m.rs) + geom_tile(aes(x = Var2, y = Var1, fill = value)) +
+  scale_fill_gradientn(name = '', colours = myPalette, limits = c(-0.15, 1)) +
+  labs(x = NULL, y = NULL) + geom_text(data = m.rs.position, aes(x = Var2, y = Var1, label = value)) +
+  theme_bw()
+if(!is.null(file)) cowplot::save_plot(plot = p, file)
+return(p)}
+
+### COlocar os dois Componentes Principais na correlação entre os caracteres
+#  ggplot(dados escalonados, aes(parametros OU parametro - mean(parametro))) +
+#    geom_point() + coord_fixed() +
+#    geom_abline(intercept = 0, slope = 1, color="blue", linetype = "dashed") +
+#    geom_abline(intercept= 0, slope = -1, color="red", linetype= "dashed") + 
+#    geom_segment(x = 0, y = 0, xend = 1, yend = 1, arrow = arrow(length = unit(0.03, "npc")), color = "blue") + 
+#    geom_segment(x = 0, y = 0, xend = 1, yend = -1, arrow = arrow(length = unit(0.03, "npc")), color = "red") + 
+#    theme_bw()
+
+#ponto mais proximo dos PCs exemplos para A escalonado
+pontoMaisProximo = function(q, p_0, p_1){
+  A = matrix(c(p_1[1] - p_0[1], p_1[2] - p_0[2],
+               p_0[2] - p_1[2], p_1[1] - p_0[1]), byrow = TRUE, ncol = 2)
+  b = -1*c(-1*  q[1]*(p_1[1] - p_0[1]) -   q[2]*(p_1[2] - p_0[2]),
+           -1*p_0[2]*(p_1[1] - p_0[1]) + p_0[1]*(p_1[2] - p_0[2]))
+  return(c(q, solve(A, b)))}
+projecoes_blue = data.frame(t(apply(scale_dentus_A[,1:2], 1, pontoMaisProximo, c(0, 0), c(1, 1))))
+names(projecoes_blue) = c("x1", "y1", "x2", "y2")
+projecoes_red = data.frame(t(apply(scale_dentus_A[,1:2], 1, pontoMaisProximo, c(0, 0), c(1, -1))))
+names(projecoes_red) = c("x1", "y1", "x2", "y2")
+ggplot(scale_dentus_A, aes(humerus, ulna)) + geom_point() + coord_fixed() +
+  geom_abline(intercept = 0, slope = 1, color = "blue", linetype = "dashed") +
+  geom_abline(intercept = 0, slope = -1, color = "red", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = 1, arrow = arrow(length = unit(0.03, "npc")), color = "blue") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = -1, arrow = arrow(length = unit(0.03, "npc")), color = "red") +
+  geom_segment(data = projecoes_blue, aes(x = x1, xend = x2, y = y1, yend = y2), linetype = "dotted", color = "blue") +
+  geom_segment(data = projecoes_red, aes(x = x1, xend = x2, y = y1, yend = y2), linetype = "dotted", color = "red") + theme_bw()
+
+pontoMaisProximo = function(q, p_0, p_1){
+  A = matrix(c(p_1[1] - p_0[1], p_1[2] - p_0[2],
+               p_0[2] - p_1[2], p_1[1] - p_0[1]), byrow = TRUE, ncol = 2)
+  b = -1*c(-1*  q[1]*(p_1[1] - p_0[1]) -   q[2]*(p_1[2] - p_0[2]),
+           -1*p_0[2]*(p_1[1] - p_0[1]) + p_0[1]*(p_1[2] - p_0[2]))
+  return(c(q, solve(A, b)))}
+projecoes_green = data.frame(t(apply(scale_dentus_A[,3:4], 1, pontoMaisProximo, c(0, 0), c(1, 1))))
+names(projecoes_green) = c("x1", "y1", "x2", "y2")
+projecoes_yellow = data.frame(t(apply(scale_dentus_A[,3:4], 1, pontoMaisProximo, c(0, 0), c(1, -1))))
+names(projecoes_yellow) = c("x1", "y1", "x2", "y2")
+ggplot(scale_dentus_A, aes(femur, tibia)) + geom_point() + coord_fixed() +
+  geom_abline(intercept = 0, slope = 1, color = "green", linetype = "dashed") +
+  geom_abline(intercept = 0, slope = -1, color = "yellow", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = 1, arrow = arrow(length = unit(0.03, "npc")), color = "green") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = -1, arrow = arrow(length = unit(0.03, "npc")), color = "yellow") +
+  geom_segment(data = projecoes_green, aes(x = x1, xend = x2, y = y1, yend = y2), linetype = "dotted", color = "green") +
+  geom_segment(data = projecoes_yellow, aes(x = x1, xend = x2, y = y1, yend = y2), linetype = "dotted", color = "yellow") + theme_bw()
+
+### Ainda para esses graficos de Componentes Principais, vamos colocar os vetores
+### que correspondem A DIREÇÃO DA COMPOTENETE PRINCIPAL
+ggplot(scale_dentus_A, aes(humerus, ulna)) + geom_point() + coord_fixed() +
+  geom_abline(intercept = 0, slope = 1, color = "blue", linetype = "dashed") +
+  geom_abline(intercept = 0, slope = -1, color = "red", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = PC1_hu_A[1], yend = PC1_hu_A[2], arrow = arrow(length = unit(0.03, "npc")), color = "green") +
+  geom_segment(x = 0, y = 0, xend = PC2_hu_A[1], yend = PC2_hu_A[2], arrow = arrow(length = unit(0.03, "npc")), color = "purple") + theme_bw()
+
+ggplot(scale_dentus_A, aes(femur, tibia)) + geom_point() + coord_fixed() +
+  geom_abline(intercept = 0, slope = 1, color = "orange", linetype = "dashed") +
+  geom_abline(intercept = 0, slope = -1, color = "brown", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = PC1_ft_A[1], yend = PC1_ft_A[2], arrow = arrow(length = unit(0.03, "npc")), color = "yellow") +
+  geom_segment(x = 0, y = 0, xend = PC2_ft_A[1], yend = PC2_ft_A[2], arrow = arrow(length = unit(0.03, "npc")), color = "black") + theme_bw()
+
+### ROTAÇÃO DO EIXO do grafico de cima tambem para o A...
+dentus_A_rot = data.frame(as.matrix(scale_dentus_A[,1:2]) %*% matrix(c(1/sqrt(2), 1/sqrt(2),
+                                                                 1/sqrt(2), -1/sqrt(2)), 2, 2))
+names(dentus_A_rot) = c("x", "y")
+ggplot(dentus_A_rot, aes(x, y)) + geom_point() + coord_fixed() +
+  geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
+  geom_hline(yintercept = 0, color = "blue", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = 0, yend = 1, arrow = arrow(length = unit(0.03, "npc")), color = "red") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = 0, arrow = arrow(length = unit(0.03, "npc")), color = "blue") +theme_bw()
+### quando definir o scale_dentus_(b,c,d,e), pode-se gerar todos os graficos com rotação do eixo
+dentus_E_rot = data.frame(as.matrix(scale_dentus_E[,1:2]) %*% matrix(c(1/sqrt(2), 1/sqrt(2),
+                                                                       1/sqrt(2), -1/sqrt(2)), 2, 2))
+names(dentus_E_rot) = c("x", "y")
+ggplot(dentus_E_rot, aes(x, y)) + geom_point() + coord_fixed() +
+  geom_vline(xintercept = 0, color = "red", linetype = "dashed") +
+  geom_hline(yintercept = 0, color = "blue", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = 0, yend = 1, arrow = arrow(length = unit(0.03, "npc")), color = "red") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = 0, arrow = arrow(length = unit(0.03, "npc")), color = "blue") +theme_bw()
+cor(dentus_E_rot$x, dentus_E_rot$y)
+
+# Rotacionando os dados usando os PCs
+### scale_dentus_A_rot_PCs_hu = data.frame(as.matrix(scale_dentus_A[,1:2]) %*% PC_cov_hu_A$vectors)
+names(scale_dentus_A_rot_PCs_hu) = c("x", "y")
+ggplot(scale_dentus_A_rot_PCs_hu, aes(x, y)) + geom_point() + coord_fixed() +
+  geom_vline(xintercept = 0, color = "purple", linetype = "dashed") +
+  geom_hline(yintercept = 0, color = "green", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = 0, yend = 1, arrow = arrow(length = unit(0.03, "npc")), color = "purple") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = 0, arrow = arrow(length = unit(0.03, "npc")), color = "green") +theme_bw()
+### scale_dentus_A_rot_PCs_ft = data.frame(as.matrix(scale_dentus_A[,3:4]) %*% PC_cov_ft_A$vectors)
+names(scale_dentus_A_rot_PCs_ft) = c("x", "y")
+ggplot(scale_dentus_A_rot_PCs_ft, aes(x, y)) + geom_point() + coord_fixed() +
+  geom_vline(xintercept = 0, color = "brown", linetype = "dashed") +
+  geom_hline(yintercept = 0, color = "orange", linetype = "dashed") +
+  geom_segment(x = 0, y = 0, xend = 0, yend = 1, arrow = arrow(length = unit(0.03, "npc")), color = "yellow") +
+  geom_segment(x = 0, y = 0, xend = 1, yend = 0, arrow = arrow(length = unit(0.03, "npc")), color = "black") +theme_bw()
+### da pra fazer todos os graficos ... substitua as respectivas letras
+
+### PERGUNTAR SOBRE ISSO
+round(cor(scale_dentus_A_rot_PCs_hu$x, scale_dentus_A_rot_PCs_hu$y), 8)
+
+### Vamos calcular os componentes principais da matriz de covariância total e fazer um gráfico dos
+### scores (dados rotacionados) nos dois primeiros componentes principais
+mat_total = cov(dentus[,1:4])
+eigT = eigen(mat_total)
+dentus_rot = data.frame(as.matrix(dentus[,1:4]) %*% eigT$vectors, species = dentus$species)
+names(dentus_rot) = c("PC1", "PC2", "PC3", "PC4", "species")
+ggplot(dentus_rot, aes(PC1, PC2, color=species)) + geom_point() + theme_bw()
+
+### Arvore Filogenética ... como ela foi desenvolvida??
+TREE = "(E:3,((D:1,B:1):1,(C:1, A:1):1):1);"
+tree = read.tree(text = TREE)
+tree$tip.label = c("E", "D", "B", "C", "A")
+tree$node.label = c("root", "ABCD", "DB", "AC")
+plot(tree, show.node.label=TRUE)
+nodelabels()
