@@ -1,0 +1,69 @@
+### Script 1: disciplina "Introdução a Análises Macroevolutivas no R"
+### some basic R language:
+### files within R are called 'objects', exemple:
+object_x <- 10**3/(45*5-45) # to run, use "Ctrl + r" or "Enter + r" or  the "run" button up this box
+object_y <- "hello" # for text (STRINGS), use quotation marks ("" or '')
+print(object_x)
+print(object_y)
+### functions use arguments within parenthesis
+object_z <- c(1, 2, 3, 5, 6, 9, 120) # function "c()" is used for creating lists
+object_z
+
+# another example
+# function "list()" is similar to function "c()" (also used for lists)
+object_w <- list(1, 2, 3, 5, 6, 9, 120)
+object_w
+
+## objects in R come in different "classes"
+# use function"class()" to check
+class(object_x)
+class(object_y)
+class(object_z)
+class(object_w)
+
+## use str function to inspect "inside" objects (to inspect its structure)
+str(object_x)
+str(object_y)
+str(object_z)
+str(object_w)
+
+## use $ symbol to show elements of an object
+object_a <- data.frame("column_1"=c(1 ,2 , 3, 4, 5),
+                       "column_2" = c(6, 7, 8, 9, 10),
+                       "column_3" = c(11, 12, 13, 14, 15))
+
+object_a
+
+object_a$column_1
+object_a$column_2
+object_a$column_3
+
+
+object_b <- data.frame("column_1" = object_a$column_1,
+                       "column_2" = object_a$column_2,
+                       "column_3" = object_a$column_3)
+
+object_b
+
+# compare:
+object_a
+object_b
+class(object_a)
+class(object_b)
+str(object_a)
+str(object_a)
+
+## the function "data.frame()" can also be used to convert objects of other
+# classes to class "data frame" this can be useful for getting your data in the
+# right format for some functions
+
+# example:
+object_c <- data.frame(object_w)
+
+# compare:
+object_c
+object_w
+class(object_c)
+class(object_w)
+str(object_c)
+str(object_w)
