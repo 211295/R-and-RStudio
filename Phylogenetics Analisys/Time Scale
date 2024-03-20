@@ -1,0 +1,253 @@
+### 20/03/2024
+###### Time-scaling methods ######
+### load packages:
+if(!require(ape)){install.packages("ape");library(ape)}
+if(!require(paleotree)){install.packages("paleotree");library(paleotree)}
+install.packages("ggplot2")
+
+### set working directory, give the PATH in the computer:
+setwd("C:/Users/HP/Documents/FELIPE/Estatistica e Programacao/Analise Filogenetica")
+
+### load tree -> can be manually constructed in Mesquite (app like iTool) and be in .nex or .tre formats
+my_tree <- read.tree("croc_tree.tre")
+### see the features of the new object
+my_tree
+str(my_tree)
+class(my_tree)
+head(my_tree)
+### head function show all elements 
+
+### explore the single element "tip.label" indicating by $ symbol after tree function
+### if write tree$ ... the R complete the options for you, in this case, we have 3 kinds of elemnts:
+### 1) edge = Relations of taxons | 2) Nnode = Number of nodes | 3) tip.label = The names of taxons
+my_tree$tip.label
+length(my_tree$tip.label) ### shows the number of taxa (305)
+Ntip(my_tree) ### another way of getting the number of taxa
+### and tells if the tree is time-scaled (with branch lengths)
+### something worth mentioning is that, in the PCMs jargon,
+### time-scaled trees are also called non-ultrametric trees. On the other hand, trees that are not time-scaled are called ultrametric trees.
+
+### plotting with the function plot
+plot(my_tree)
+### if dont work because the "marging too large" try to use  the function "dev.off"
+### An ugly plot is showed, lets play to configurate a beautifull tree you can always change how plots look in R, but it can be time consuming to find out how.
+### click on "Zoom" (in "Plots" tab) to magnify
+
+plot(my_tree, direction = "right", cex = 0.3) # the "cex" argument refers to the font size of tips
+plot(my_tree, direction = "upwards", cex = 0.3) # the "direction", well, changes the direction...
+
+### function "ladderize()" makes it look better
+ladderize(my_tree)
+plot(my_tree, direction = "right", cex = 0.3) # didn't change because it was already "ladderized"...
+
+### load ages with the function read.table to read the notes as a table, with the first line being the header
+ages <- read.table("croc_ages.txt", header=TRUE)
+ages
+str(ages) # nice, it has the same number of taxa (305)
+
+#############################################################################################################################################
+### Time-scale method! first, the "basic" method is using the fuction timePaleoPhy of the libary paleotree
+time_my_tree <- timePaleoPhy(tree = my_tree, timeData = ages, type = "basic")
+
+### congratulations! your first Error message!
+### let's investigate the error: Absolutely NO valid taxa shared between the tree and temporal data!"
+### It means that the tree object and the "ages" object are not matching. Take a look at the help tab for this function (or use the package documentation pdf)
+
+### look at the "Arguments" tree and timeData:
+# "tree: An unscaled cladogram of fossil taxa, of class phylo. Tip labels must match the taxon labels in the respective temporal data." its rigth
+# "timeData: Two-column matrix of first and last occurrences in absolute continuous time, with row names as the taxon IDs used on the tree.
+#           This means the first column is very precise FADs (first appearance dates) and the second column is very precise LADs (last appearance dates),
+#           reflect the precise points in time when taxa first and last appear. If there is stratigraphic uncertainty in when taxa appear in the fossil record,
+#           it is preferable to use the 'bin' time-scaling functions; however, see the argument dateTreatment."
+
+### Okay. So, it says that the "ages" object has to be a 'two-column matrix' as in the instruction
+### With you inspect str(ages) you can see have 3 columns, that's because the names of the taxa are being treated as a variable. that's why it's not working
+
+### let's fix that, putting our taxa in the right place (as row names)
+rownames(ages) <- ages$taxa
+### Index a dataframe to a new object of the table we have to fix the problem above
+### Use the -1 to remove the firts collumn
+new1_ages <- ages[,-1]
+str(new1_ages) # now it looks right
+new1_ages # confirming... its something wrong because 
+
+### As an alternative, we could have loaded the "ages" object in the correct way to start with
+### This can be done by adding argument "row.names" and informing the function that the first column should be read as rown ames:
+new2_ages <- read.table("croc_ages.txt", header=T, row.names = 1)
+str(new2_ages) # 2 variables as before
+new2_ages # looks right!
+
+### Now, let's try the time-scaling function again
+time_tree <- timePaleoPhy(tree = my_tree, timeData = new2_ages, type = "basic")
+### It worked!
+### let's check the features
+time_tree # it includes branch lengths now (it is time scaled)
+Ntip(time_tree) # same number of tips (taxa)
+head(time_tree) # all informations
+plot(time_tree) # ugly plot
+plot(time_tree, direction = "right", cex = 0.3) # better looking plot
+### choose the diferents directions = "left" | "upwards" | "downwards"
+
+### The problem with this method ("basic") that contains many zero-length branches that look like polytomies.
+### Most methods require fully resolved trees.
+### Sometimes, it is hard to be sure if the tree has zero branch lengths, the following line says if we have zero branch lengths
+any(time_tree$edge.length == 0) # TRUE indicates that it has zero branch lengths
+### Try to use the function howmany kkkk lol, its a joke!
+
+### Anyway, we need to use the other methods that can deal with zero-length branches. Before that, let's talk about FAD and LAD.
+### the argument "dateTreatment" controls the interpretation of the "ages" object:
+### from the "Help" tab: "The default setting dateTreatment = "firstLast" treats the dates in timeData as a column of precise first and last appearances."
+
+### the "best" (less worse) option is to drawn the values from an uniform distribution, between the maximum and minimum possible ages.
+
+### for that, use option dateTreatment = "minMax":
+time_tree_2 <- timePaleoPhy(tree = my_tree, timeData = new2_ages, type = "basic", dateTreatment="minMax") 
+### IGNORE THE WARNING MESSAGE FOR NOW
+
+### let's compare both trees
+plot(time_tree, direction = "rigth", cex = 0.3)
+plot(time_tree_2, direction = "rigth", cex = 0.3)
+
+### they are slightly different, but it can impact on results of macroevolutionary analyses.
+### for the other methods (below), we will use the same treatment for the "ages" object
+
+####################################################################################################
+### the "equal" method
+
+## Now let's focus on the method "equal".
+# let's read about it in the "Help" tab:
+# "This method works by increasing the time of the root divergence by some amount and then adjusting
+# zero-length branches so that time on early branches is re-apportioned out along those later branches equally."
+
+time_tree_equal <- timePaleoPhy(tree = my_tree, timeData = new2_ages, type = "equal", dateTreatment="minMax", vartime = 20)
+### the "vartime" argument tells the function how far back the root will be pushed to
+
+plot(time_tree_equal, direction = "right", cex = 0.3)
+
+### it's hard to see, but it still contains "polytomies" (from the original tree) since this is hard to check with the naked eye, we can use some functions for that
+is.binary(time_tree_equal) # if TRUE, the tree has no polytomies
+
+### Right, let's randomly resolve the polytomies:
+time_tree_equal <- timePaleoPhy(tree = my_tree, timeData = new2_ages, type = "equal", dateTreatment="minMax", vartime = 20, randres = TRUE)
+### the "randres" argument set to TRUE resolves the tree randomly
+
+### IT`S WORNG AGAIN PAY ATTENTION FOT HE WAWNING MESSAGE: "Do not interpret a single randomly-resolved tree"
+
+### This is true, because different topologies can impact on the results of macroevolutionary analyses so, let's get more trees:
+time_trees_equal <- timePaleoPhy(tree = my_tree, timeData = new2_ages, type = "equal", dateTreatment="minMax", vartime = 20, randres = TRUE, ntrees =  20)
+### the "ntrees" argument set the number of trees you want to interpret because its wrong interpret A SINGLE TREE WITH RANDOM POLYTOMIES RESOLUTION
+time_trees_equal
+
+### You can access the number of each tree created randomly [[n]]
+### Using always the dobble brackets [ [ ] ]
+time_trees_equal[[1]] # take the first one
+time_trees_equal[[2]] # take the second one
+time_trees_equal[[3]] # take the trith one
+# ...
+# ...
+# ...
+time_trees_equal[1:7] # take the fist to seveth 
+
+### the object "time_trees_equal" has 20 trees as showed in the Console
+### let's check the class of this object and it's structure:
+class(time_trees_equal) # "multiPhylo"
+class(time_tree_equal) # "phylo"
+str(time_trees_equal)
+str(time_tree_equal)
+
+### Plot and access individual trees, use double square brackets
+plot(time_trees_equal[[1]], direction = "right", cex = 0.3) # plots tree number 1
+
+### now we've seen that the tree needs to be ladderized (make a kind of sters)
+plot(ladderize(time_trees_equal[[1]], right=FALSE), direction = "right", cex = 0.3)
+
+### Ladderize amount of trees, use a loop: for i in range (like python but diferent)
+### create a empty list first because R have to know what do you want create
+time_trees_equal_lad = list()
+for (i in 1: 20) {time_trees_equal_lad[[i]] <- ladderize(time_trees_equal[[i]], right = FALSE)}
+### we nee to use loops (to apply functions to many objects at the same time)
+
+### OR, instead use the number 20, we used "length(time_trees_equal)"
+time_trees_equal_lad2 <- list()
+for (i in 1: length(time_trees_equal)) {time_trees_equal_lad2[[i]]<-ladderize(time_trees_equal[[i]], right = F)}
+### now all 20 trees are ladderized.
+### let's plot tree number 15 to check
+plot(time_trees_equal_lad[[15]], direction = "right", cex = 0.3)
+
+### As we used the "for loop" to ladderize all the trees, the class of our object has changed to a list:
+class(time_trees_equal_lad)
+
+### Let's change it back to "multiPhylo" for saving files afterwards
+class(time_trees_equal_lad) <- "multiPhylo"
+
+### Plotting tree 13 to check
+plot(time_trees_equal_lad[[13]], direction = "right", cex = 0.3)
+
+### now, let's save them (for future analyses and sharing with publication)
+write.tree(time_trees_equal_lad, file = "croc tree, 20 trees, equal method.tre")
+### saves as .tre (good for sharing with publications)
+dput(time_trees_equal_lad, file = "croc tree, 20 trees, equal method.txt")
+### for keeping the root age (good for other analyses in R because it keeps the root age)
+
+##########################################################################################################################
+### The "mbl" method
+### from the "Help" tab:
+### "Minimum branch length. Scales all branches so they are greater than or equal to vartime, and subtract time added to later branches from earlier branches in order to maintain the temporal structure of events."
+
+### difference from "equal" is that "mbl" tries to keep the same nodes' ages
+
+### "vartime" is used as the minimum branch length value
+time_trees_mbl <- timePaleoPhy(my_tree, new2_ages, type="mbl", randres=T, vartime=1, ntrees=20, dateTreatment="minMax") 
+
+###ladderizing and changing the name:
+time_trees_mbl_lad <- list()
+for (i in 1: length(time_trees_mbl)) {time_trees_mbl_lad[[i]]<-ladderize(time_trees_mbl[[i]], right = F)}
+class(time_trees_mbl_lad) <- "multiPhylo"
+
+### checking/plotting random trees you want:
+plot(time_trees_mbl_lad[[7]], direction = "right", cex = 0.3) # plotting tree 6 to check
+plot(time_trees_mbl_lad[[11]], direction = "right", cex = 0.3) # plotting tree 8 to check
+plot(time_trees_mbl_lad[[13]], direction = "right", cex = 0.3) # plotting tree 8 to check
+
+### saving:
+write.tree(time_trees_mbl_lad, file = "croc tree, 20 trees, mbl method.tre")
+dput(time_trees_mbl_lad, file = "croc tree, 20 trees, mbl method.txt")
+
+### just a tip: for plotting multiple trees on the same window/page, use the "par()" function:
+par(mfrow=c(2,2))
+plot(ttrees_mbl[[1]], direction = "right", cex = 0.3)
+plot(ttrees_mbl[[6]], direction = "right", cex = 0.3)
+plot(ttrees_mbl[[8]], direction = "right", cex = 0.3)
+plot(ttrees_mbl[[20]], direction = "right", cex = 0.3)
+
+# use function "dev.off()" for resetting the plot settings
+dev.off()
+
+## comparing two trees of each method:
+par(mfrow=c(2,2))
+plot(ttrees_mbl[[1]], direction = "right", cex = 0.3)
+plot(ttrees_mbl[[6]], direction = "right", cex = 0.3)
+plot(ttrees_equal[[1]], direction = "right", cex = 0.3)
+plot(ttrees_equal[[6]], direction = "right", cex = 0.3)
+
+
+############################
+####### Other methods ######
+############################
+
+# Now it's on you!
+
+# Choose one (or multiple) of the methods below
+# and try to run it using your won data (if you have any)
+# or the same data I shared with you (croc_tree and croc_ages):
+
+#1 cal3 method
+
+#2 Hedman method
+
+#3 tip-dating (fossilized birth-death) method
+
+
+# obs: method #1 can be done using the same package (paleotree)
+# obs2: method #2 needs a code from a paper (Lloyd et al 2016))
+# obs3: method #3 needs to be finished in MrBayes
