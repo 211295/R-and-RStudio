@@ -156,6 +156,7 @@ str(time_trees_equal)
 str(time_tree_equal)
 
 ### Plot and access individual trees, use double square brackets
+### IF YOU WANT PLOT MORE THAN 1 CHART, SEE BELOW THE TIP IN THE END OF THE SCRIPT
 plot(time_trees_equal[[1]], direction = "right", cex = 0.3) # plots tree number 1
 
 ### now we've seen that the tree needs to be ladderized (make a kind of sters)
@@ -213,40 +214,31 @@ plot(time_trees_mbl_lad[[13]], direction = "right", cex = 0.3) # plotting tree 8
 write.tree(time_trees_mbl_lad, file = "croc tree, 20 trees, mbl method.tre")
 dput(time_trees_mbl_lad, file = "croc tree, 20 trees, mbl method.txt")
 
-### just a tip: for plotting multiple trees on the same window/page, use the "par()" function:
-par(mfrow=c(2,2))
-plot(ttrees_mbl[[1]], direction = "right", cex = 0.3)
-plot(ttrees_mbl[[6]], direction = "right", cex = 0.3)
-plot(ttrees_mbl[[8]], direction = "right", cex = 0.3)
-plot(ttrees_mbl[[20]], direction = "right", cex = 0.3)
-
-# use function "dev.off()" for resetting the plot settings
+### just a tip: for plotting multiple trees on the same window/page, use the "par()" function, which is used for reconfiguate the Plots Screen
+### use function "dev.off()" for resetting the plot settings (in the plot screen)
 dev.off()
-
-## comparing two trees of each method:
 par(mfrow=c(2,2))
-plot(ttrees_mbl[[1]], direction = "right", cex = 0.3)
-plot(ttrees_mbl[[6]], direction = "right", cex = 0.3)
-plot(ttrees_equal[[1]], direction = "right", cex = 0.3)
-plot(ttrees_equal[[6]], direction = "right", cex = 0.3)
+plot(time_trees_mbl_lad[[1]], direction = "right", cex = 0.3)
+plot(time_trees_mbl_lad[[6]], direction = "right", cex = 0.3)
+plot(time_trees_mbl_lad[[8]], direction = "right", cex = 0.3)
+plot(time_trees_mbl_lad[[20]], direction = "right", cex = 0.3)
 
+### comparing two trees of each method:
+dev.off()
+par(mfrow=c(2,2))
+plot(time_trees_mbl_lad[[1]], direction = "right", cex = 0.3)
+plot(time_trees_mbl_lad[[6]], direction = "right", cex = 0.3)
+plot(time_trees_equal_lad[[1]], direction = "right", cex = 0.3)
+plot(time_trees_equal_lad[[6]], direction = "right", cex = 0.3)
 
-############################
 ####### Other methods ######
-############################
-
-# Now it's on you!
-
-# Choose one (or multiple) of the methods below
-# and try to run it using your won data (if you have any)
-# or the same data I shared with you (croc_tree and croc_ages):
+### Choose one (or multiple) of the methods below and try to run it using your won data (if you have any) or the same data I shared with you (croc_tree and croc_ages):
 
 #1 cal3 method
 
 #2 Hedman method
 
 #3 tip-dating (fossilized birth-death) method
-
 
 # obs: method #1 can be done using the same package (paleotree)
 # obs2: method #2 needs a code from a paper (Lloyd et al 2016))
