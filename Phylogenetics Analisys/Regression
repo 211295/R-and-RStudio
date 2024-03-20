@@ -6,6 +6,6 @@ if(!require(paleotree)){install.packages("paleotree");library(paleotree)}
 if(!require(nlme)){install.packages("nlme");library(nlme)}
 if(!require(caper)){install.packages("caper");library(caper)}
 
-### set working directory with the correct PATH
+### set working directory with the correct PATH and load files
 ### Use the correct direction of the bash / 
 setwd("C:/Users/HP/Documents/FELIPE/Estatistica e Programacao/Analise Filogenetica")
