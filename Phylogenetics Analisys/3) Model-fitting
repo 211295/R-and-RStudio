@@ -1,0 +1,8 @@
+### Model-fitting analyses  ###
+### load packages:
+if(!require(ape)){install.packages("ape");library(ape)}
+if(!require(paleotree)){install.packages("paloetree");library(paleotree)}
+if(!require(geiger)){install.pagckages("geiger");library(geiger)}
+
+# set working directory, using your PATH: 
+setwd("C:/Users/HP/Documents/FELIPE/Estatistica e Programacao/Analise Filogenetica")
