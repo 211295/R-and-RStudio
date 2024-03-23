@@ -22,10 +22,9 @@ head(my_tree)
 ### 1) edge = Relations of taxons | 2) Nnode = Number of nodes | 3) tip.label = The names of taxons
 my_tree$tip.label
 length(my_tree$tip.label) ### shows the number of taxa (305)
-Ntip(my_tree) ### another way of getting the number of taxa
-### and tells if the tree is time-scaled (with branch lengths)
-### something worth mentioning is that, in the PCMs jargon,
-### time-scaled trees are also called non-ultrametric trees. On the other hand, trees that are not time-scaled are called ultrametric trees.
+Ntip(my_tree) ### another way of getting the number of taxa and tells if the tree is time-scaled (with branch lengths)
+### something worth mentioning is that, in the PCMs jargon, time-scaled trees are also called non-ultrametric trees. 
+### On the other hand, trees that are not time-scaled are called ultrametric trees.
 
 ### plotting with the function plot
 plot(my_tree)
