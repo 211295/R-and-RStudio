@@ -6,3 +6,58 @@ if(!require(geiger)){install.pagckages("geiger");library(geiger)}
 
 # set working directory, using your PATH: 
 setwd("C:/Users/HP/Documents/FELIPE/Estatistica e Programacao/Analise Filogenetica")
+
+### Since we already have time-scaled trees (see time-scaling), let's import them. For example, we can import the "mbl trees" we created with the previous script:
+trees <- dget(file = "croc tree, 20 trees, mbl method.txt")
+
+### selecting the first 5 trees only (instead of all 20 trees, for making analyses faster)
+five_trees <- trees[1:5]
+
+### load ages (as in time-scale tutorial)
+ages <- read.table("croc_ages.txt", header=T, row.names = 1)
+
+### load data (using function "read.table()":
+my_data <- read.table("croc_sizes.txt", header=T) # avoid using the word "data"
+
+### This dataset contains crocodylomorph body size data. Instead of estimating total body size, it uses a proxy (the cranial measurement ODCL)
+### this measurement was log-transformed prior to being imported into R
+
+### inspecting the 'my_data' object
+my_data
+class(my_data)
+str(my_data) 
+### this data has 241 observations (obs), which are the specimens, get the average values for each species
+
+### let's do it using a loop and functions "unique()" and "mean()"
+### function "unique()" gets unique names in element "Taxon"
+taxon.list <- unique(my_data$Taxon) 
+str(taxon.list) # we now know that there are 195 taxa
+length(taxon.list)
+
+### now, let's use a loop for getting mean values:
+taxon.lengths <- c() 
+### must create an empty list, R needs a object to receive the loop
+for(i in 1: length(taxon.list)) {taxon.lengths[i] <- mean(my_data[my_data$Taxon==taxon.list[i], "log_odcl"])}
+###this part can be a bit confusing, but it gets easy with practice
+
+names(taxon.lengths) <- taxon.list
+### uses the list of specimens we created above as the row names of this new list
+my_new_data <- taxon.lengths # renaming it back to "my_data"
+
+### inspecting, it should be 195 species!
+my_new_data
+head(my_new_data)
+str(my_new_data)
+class(my_new_data)
+### it is now a 'numeric' object. we might need to convert it back to 'data frame' later...
+
+## now, let's compare the tree with the data
+length(my_new_data) # 195 taxa
+Ntip(ttrees[[1]]) # 305 taxa
+
+### Ok. So, now we need to drop (remove) taxa from the tree for which we do not have data
+
+# again, we can do this using a loop and function "dropPaleoTip()":
+# ps: there is another (more famous) function called "drop.tip()", which does basically the same,
+# however, "dropPaleoTip()" works better on non-ultrametric trees (with fossils)
+# because it keeps the ages of the nodes.
