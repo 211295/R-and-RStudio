@@ -1,0 +1,98 @@
+### 22/03/2023
+### Model-fitting analyses  ###
+### load packages:
+if(!require(ape)){install.packages("ape");library(ape)}
+if(!require(paleotree)){install.packages("paloetree");library(paleotree)}
+if(!require(geiger)){install.pagckages("geiger");library(geiger)}
+install.packages("ggplot2")
+
+### set working directory and load files: 
+setwd("C:/Users/HP/Documents/FELIPE/Estatistica e Programacao/Analise Filogenetica")
+
+### Since we have already have time-scaled trees, let's import them, for example, we can import the "mbl trees" we created with "2) Regression" script:
+trees<-dget(file = "croc tree, 20 trees, mbl method.txt")
+
+### selecting the first 5 trees only (instead of all 20 trees, for making analyses faster)
+five_trees <- trees[1:5] # Ideally, we should use many more trees (~100 trees)
+
+### load data and inspect (using function "read.table()" with header TRUE):
+croc_size <- read.table("croc_sizes.txt", header=TRUE)
+str(croc_size) # 241 specimens
+class(croc_size)
+head(croc_size)
+summary(croc_size)
+
+### getting mean values for each species:
+taxon.list <- unique(croc_size$Taxon)
+print(taxon.list)
+taxon.lengths <- c()
+for(i in 1: length(taxon.list)) {taxon.lengths[i] <- mean(croc_size[croc_size$Taxon==taxon.list[i], "log_odcl"])}
+names(taxon.lengths) <- taxon.list
+taxon_croc_size <- taxon.lengths
+
+### inspecting
+str(taxon_croc_size) # 195 species
+class(taxon_croc_size)
+head(taxon_croc_size)
+
+### Dropping taxa from the tree for which we do not have data
+for (i in 1: length(five_trees)) {five_trees[[i]] <- dropPaleoTip(five_trees[[i]], five_trees[[i]]$tip.label[!(five_trees[[i]]$tip.label %in% names(taxon.lengths))])} # also a bit complicated...
+
+### Comparing:
+length(taxon_croc_size) # 195 taxa
+Ntip(five_trees[[1]]) # 195 taxa
+
+### Great! Now we can proceed with the analyses. AT NOW LEST DO MODEL-FITING
+
+### In this script, we will only fit uniform models (in which parameters don't change along the tree/through time)
+### the most commonly used function for fitting these simple models is "fitContinuous()", from package geiger
+### take a look at the "Help" tab for this function
+### there are many models | model = c("BM","OU","EB","rate_trend","lambda","kappa","delta","mean_trend","white"),
+
+### let's fit the following 3 models: Brownian motion (BM), OU, and the trend (a BM with the trend parameter)
+
+### for that, let's start creating a list with the models we want:
+models <- c("BM","OU","mean_trend") # in geiger, the 'trend' model (as we understand it) is called 'mean_trend' (or 'drift', in older versions)
+
+### now, for fitting the models, let's use loops and function "fitContinuous()":
+results <- list() # creates an empty list for our results
+
+### the following loops will start the analyses, but they can take some time, so be patient!
+### let's measure how long it takes:
+
+### Start the clock!:
+start <- Sys.time()
+### set.seed() function 
+### start analyses: 
+### the first part of the loop (for each tree - 5 trees in the current example)
+### the second part of the loop (for each model)
+### the "fitContinuous()" needs the data, the tree and the model, you can inspect in help
+for(i in 1: length(five_trees)) {results[[i]] <- list()
+  for(j in 1: length(models)) results[[i]][[j]] <- fitContinuous(five_trees[[i]], taxon_croc_size, model=models[[j]])} 
+### Stop the clock!:
+end <- Sys.time()
+
+### How long did it take?:
+end - start # in my computer, it took
+
+### luckily, the function accepted our "new_data" object as 'numeric and run it smoothly
+### some functions will only take data frames...
+### also, if there are some warnings, it might be worth inspecting them, but they are usually okay...
+
+### let's take a look at the results,too long
+results
+### inspecting
+str(results)
+class(results)
+length(results) # 5, which means that there is one list **for each tree**
+
+### Looking at the length of the first list (of the first tree):
+length(results[[1]])  # 3, which means that there are 3 lists (one for each model) for each tree
+
+### To make it easier, let's give names to the elements of the list, using the models
+for(i in 1:length(results)) {names(results[[i]]) <- models}
+
+### now, for each tree, we can use $ to check the results for each model:
+results[[1]]$BM
+results[[1]]$OU
+results[[1]]$mean_trend
