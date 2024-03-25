@@ -1,0 +1,126 @@
+### Ancestral States ###
+### Load packages
+if(!require(corHMM)){install.packages("corHMM");library(corHMM)}
+if(!require(phytools)){install.packages("phytools");library(phytools)}
+if(!require(phangorn)){install.packages("phangorn");library(phangorn)}
+library(evobiR)
+
+### Read tree
+anolis_tree<-read.tree("anolis_tree.nwk")
+print(anolis_tree)
+
+### Read data and ensure that the tree tip.labesl are in the same order
+anolis_data <-read.csv("anolis_data.csv",row.names=1)
+anolis_data <-ReorderData(anolis_tree,anolis_data)
+anolis_data <-data.frame(taxon=rownames(anolis_data),trait=anolis_data$Trait)
+anolis_data
+
+### LIKELIHOOD ###
+### Define color palette, creat new list with the traits at anolis_data and macth 6 colors with the 6 diferents traits
+cols<-rainbow(6)
+states<-c("CG","GB","TC","TG","Tr","Tw")
+n_state<-c(1:length(states))
+Models<-c("ER","SYM","ARD")
+
+### MARGINAL estimations of ancestral states ###
+### This model gives a probability to find the ancestral state in the ancestral
+### Model "Equal Rates" (ER), use the corHMM() function from corHMM libary, read help to more informations
+HMM_ER<-corHMM(anolis_tree,anolis_data,model="ER",rate.cat=1,node.states="marginal")
+HMM_ER
+tip_anolis<-as.factor(setNames(anolis_data[,2], anolis_data[,1])) # see Time Scale
+plotTree(anolis_tree,fsize=0.5,ftype="i",lwd=1)
+nodelabels(node=1:anolis_tree$Nnode+Ntip(anolis_tree),pie=HMM_ER$states,piecol=cols,cex=0.3)
+
+tiplabels(pie=to.matrix(tip_anolis[anolis_tree$tip.label],levels(tip_anolis)),piecol=cols,cex=0.15,offset=-0.01)
+### piecol = color | offset = | cex = 
+legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+### x where you want to let the legend
+### pch is the cod of circle form.. could be square (18) or triagle (17)
+title("Marginal ER",line = -0.7)
+
+### Model "Symmetric" (SYM)
+HMM_SYM<-corHMM(anolis_tree,anolis_data,model="SYM",rate.cat=1,node.states="marginal")
+HMM_SYM
+tip_anolis2<-as.factor(setNames(anolis_data[,2],anolis_data[,1]))
+plotTree(anolis_tree,fsize=0.5,ftype="i",lwd=1)
+nodelabels(node=1:anolis_tree$Nnode+Ntip(anolis_tree),pie=HMM_SYM$states,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(tip_anolis2[anolis_tree$tip.label],levels(tip_anolis2)),piecol=cols,cex=0.15,offset=-0.01)
+legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+title("Marginal SYM",line = -0.7)
+
+### Model "All Rates Different" (ARD)
+HMM_ARD<-corHMM(anolis_tree,anolis_data,model="ARD",rate.cat=1,node.states="marginal")
+HMM_ARD
+tip_anolis3<-as.factor(setNames(anolis_data[,2],anolis_data[,1]))
+plotTree(anolis_tree,fsize=0.5,ftype="i",lwd=1)
+nodelabels(node=1:anolis_tree$Nnode+Ntip(anolis_tree),pie=HMM_ARD$states,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(tip_anolis3[anolis_tree$tip.label],levels(tip_anolis3)),piecol=cols,cex=0.15,offset=-0.01)
+legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+title("Marginal ARD",line = -0.7)
+
+### Summarize model-fit information AICc and AICw for MARGINAL estimations
+AICc<-c(HMM_ER$AICc,HMM_SYM$AICc,HMM_ARD$AICc)
+AICw<-as.vector(aic.w(AICc))
+Summary_marginal<-data.frame(Models,AICc,AICw)
+Summary_marginal
+
+### JOINT estimations of ancestral states
+### Model "Equal Rates" (ER) with the state "joint", it's means there is a unical possibility of ancestral state
+joint_ER<-corHMM(anolis_tree,anolis_data,model="ER",rate.cat=1,node.states="joint")
+joint_ER
+state_joint_ER<-joint_ER$states
+pies<-matrix(nrow=length(state_joint_ER),ncol=length(states))
+for(i in 1:length(state_joint_ER)) {for (j in 1:length(states))
+  	{if (state_joint_ER[i]==n_state[j]){pies[i,j]<-1}
+    else {pies[i,j]<-0}}}
+tip_anolis4<-as.factor(setNames(anolis_data[,2],anolis_data[,1]))
+plotTree(anolis_tree,fsize=0.5,ftype="i",lwd=1)
+nodelabels(node=1:anolis_tree$Nnode+Ntip(anolis_tree),pie=pies,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(tip_anolis4[anolis_tree$tip.label],levels(tip_anolis4)),piecol=cols,cex=0.15,offset=-0.01)
+legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+title("Joint ER",line = -0.7)
+
+### Model "Symmetric" (SYM)
+joint_SYM<-corHMM(anolis_tree,anolis_data,model="SYM",rate.cat=1,node.states="joint")
+joint_SYM
+state_joint_SYM<-joint_SYM$states
+pies<-matrix(nrow=length(state_joint_SYM),ncol=length(states))
+for(i in 1:length(state_joint_SYM)) {for (j in 1:length(states))
+	{ if (state_joint_SYM[i]==n_state[j]) {pies[i,j]<-1} 
+  else {pies[i,j]<-0} } }
+tip_data<-as.factor(setNames(anolis_data[,2],anolis_data[,1]))
+plotTree(anolis_tree,fsize=0.5,ftype="i",lwd=1)
+nodelabels(node=1:anolis_tree$Nnode+Ntip(anolis_tree),pie=pies,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(tip_data[anolis_tree$tip.label],levels(tip_data)),piecol=cols,cex=0.15,offset=-0.01)
+legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+title("Joint SYM",line = -0.7)
+
+### Model "All Rates Different" (ARD)
+j_ARD<-corHMM(tr,dat,model="ARD",rate.cat=1,node.states="joint")
+j_ARD
+st<-j_ARD$states
+pies<-matrix(nrow=length(st),ncol=length(states))
+for(i in 1:length(st))
+{
+	for (j in 1:length(states))
+	{ 
+		if (st[i]==n_state[j]){
+		pies[i,j]<-1
+		} else {
+		pies[i,j]<-0
+		}
+	}
+}
+tip_data<-as.factor(setNames(dat[,2],dat[,1]))
+plotTree(tr,fsize=0.5,ftype="i",lwd=1)
+nodelabels(node=1:tr$Nnode+Ntip(tr),pie=pies,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(tip_data[tr$tip.label],levels(tip_data)),piecol=cols,cex=0.15,offset=-0.01)
+legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+title("Joint ARD",line = -0.7)
+
+###Summarize model-fit information AICc and AICw for JOINT estimations
+Models<-c("ER","SYM","ARD")
+AICc<-c(j_ER$AICc,j_SYM$AICc,j_ARD$AICc)
+AICw<-as.vector(aic.w(AICc))
+Summary_joint<-data.frame(Models,AICc,AICw)
+Summary_joint
