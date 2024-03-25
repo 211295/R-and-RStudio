@@ -6,6 +6,230 @@ if(!require(paleotree)){install.packages("paleotree");library(paleotree)}
 if(!require(nlme)){install.packages("nlme");library(nlme)}
 if(!require(caper)){install.packages("caper");library(caper)}
 
-### set working directory with the correct PATH and load files
-### Use the correct direction of the bash / 
+### set working directory load files
 setwd("C:/Users/HP/Documents/FELIPE/Estatistica e Programacao/Analise Filogenetica")
+
+### Since we already have time-scaled trees (see time-scaling), let's import them. For example, we can import the "mbl trees" we created with the previous script:
+trees <- dget(file = "croc tree, 20 trees, mbl method.txt")
+
+### selecting the first 5 trees only (instead of all 20 trees, for making analyses faster)
+five_trees <- trees[1:5]
+
+### load ages (as in time-scale tutorial)
+ages <- read.table("croc_ages.txt", header=T, row.names = 1)
+
+### load data (using function "read.table()":
+my_data <- read.table("croc_sizes.txt", header=T) # avoid using the word "data"
+
+### This dataset contains crocodylomorph body size data. Instead of estimating total body size, it uses a proxy (the cranial measurement ODCL)
+### this measurement was log-transformed prior to being imported into R
+
+### inspecting the 'my_data' object
+my_data
+class(my_data)
+str(my_data) 
+### this data has 241 observations (obs), which are the specimens, get the average values for each species
+
+### let's do it using a loop and functions "unique()" and "mean()"
+### function "unique()" gets unique names in element "Taxon"
+taxon.list <- unique(my_data$Taxon) 
+str(taxon.list) # we now know that there are 195 taxa
+length(taxon.list)
+
+### now, let's use a loop for getting mean values:
+taxon.lengths <- c() 
+### must create an empty list, R needs a object to receive the loop
+for(i in 1: length(taxon.list)) {taxon.lengths[i] <- mean(my_data[my_data$Taxon==taxon.list[i], "log_odcl"])}
+###this part can be a bit confusing, but it gets easy with practice
+
+names(taxon.lengths) <- taxon.list
+### uses the list of specimens we created above as the row names of this new list
+my_new_data <- taxon.lengths # renaming it back to "my_data"
+
+### inspecting, it should be 195 species!
+my_new_data
+head(my_new_data)
+str(my_new_data)
+class(my_new_data)
+### it is now a 'numeric' object. we might need to convert it back to 'data frame' later...
+
+### now, let's compare the tree with the data
+length(my_new_data) # 195 taxa
+Ntip(five_trees[[1]]) # 305 taxa
+
+### Ok. So, now we need to drop (remove) taxa from the tree for which we do not have data
+
+### again, we can do this using a loop and function "dropPaleoTip()":
+### ps: there is another (more famous) function called "drop.tip()", which does basically the same,
+### however, "dropPaleoTip()" works better on non-ultrametric trees (with fossils)
+### because it keeps the ages of the nodes.
+for(i in 1: length(five_trees)){five_trees[[i]] <- dropPaleoTip(five_trees[[i]], five_trees[[i]]$tip.label[!(five_trees[[i]]$tip.label %in% names(taxon.lengths))])}
+### look after ->>> for(i in 1: length(five_trees)){five_trees[[i]] <- dropPaleoTip(treeOrig = five_trees[[i]],treeNew = five_trees[[i]]$tip.label[!(five_trees[[i]]$tip.label %in% names(taxon.lengths))])}
+
+### comparing again:
+length(my_new_data) # 195 taxa
+Ntip(five_trees[[1]]) # 195 taxa
+
+## Now, for the regression analyses, we will also need the "ages data" to contain the
+# same number of taxa (195)
+
+# originally, the 'ages" object has more taxa:
+str(ages) #305 taxa
+
+## So, let's drop (remove) the other taxa from it:
+drop_ages <- ages[(rownames(ages) %in% five_trees[[1]]$tip.label), ]
+
+## Let's compare all three objects:
+length(my_new_data) # 195 taxa
+Ntip(five_trees[[1]]) # 195 taxa
+length(drop_ages$FAD) # 195 taxa
+
+## Finally, let's transform the data back into a "data frame"
+my_new_data2 <- data.frame(log_odcl = my_new_data, stringsAsFactors = FALSE)
+class(my_new_data2)
+str(my_new_data2)
+### Dividing taxa into time bins
+
+### In this case, we are using a time_bins file I created in Excel.
+### It basically has some arbitrary divisions of time in ~9 million years, and extends back until de the end of the Triassic. In the end, there are 28 time bins
+
+## Read time bins file
+timebins <- read.table("time_bins.txt", header=F)
+
+## time range (in binning scheme) of each taxon
+taxarange <- binTimeData(drop_ages, int.times=timebins) # this is a function from "paleotree" package
+
+# inspecting:
+str(taxarange) # taxa are divided into 28 time bins
+taxicDivDisc(taxarange) # this shows the "diversity through time", function of "paleotree" libery, use help to understand
+
+# to know how many taxa (and which are they) for each of the 28 time bins:
+taxon.times <- as.data.frame(taxarange$taxon.times)
+print(taxon.times)
+int.times <- as.data.frame(taxarange$int.times); colnames(int.times) <- c("first.int","last.int")
+print(int.times)
+
+### now, let's finally divide them into separate time bins
+binned.taxa <- c() # creates an empty list for the loop function
+for (i in 1:nrow(int.times)) {binned.taxa[[i]] <- taxon.times[taxon.times$first.int <= i & taxon.times$last.int >= i, ]}
+print(binned.taxa[1]) # for taxa in the first (oldest) time bin
+### No taxa in this time bin...
+
+binned.taxa[3] #  for taxa in the third time bin 
+### 4 taxa in this time bin.
+
+binned.taxa[28] # for taxa in the 28th (earliest) time bin
+### many taxa in this time bin!
+
+### Now, let's set trait values (body size values) to each time bin
+### body size values for all time bins:
+values.all.bins<-c()
+for (i in 1:nrow(int.times)) {values.all.bins[[i]] <- list(my_new_data2[rownames(binned.taxa[[i]]), "log_odcl"])}
+names(values.all.bins)<-rownames(timebins)
+values.all.bins
+
+### For our regression analyses, we will use mean (average) values, let's obtain mean body size values for each time bin.
+mean.all.bins<-c()
+for (i in 1:nrow(int.times)) {mean.all.bins[[i]] <-mean(my_new_data2[rownames(binned.taxa[[i]]),"log_odcl"])}
+names(mean.all.bins)<-rownames(timebins)
+mean.all.bins
+
+### Inspect 
+head(mean.all.bins)
+class(mean.all.bins)
+str(mean.all.bins)
+
+###  We could do the same for obtaining maximum, minimum or range values for each time bin it depends on the type of question we want to answer.
+
+### Now, let's include all this information in a data frame (for making analyses easier):
+mean_bins <- data.frame("log_odcl" = as.numeric(mean.all.bins), stringsAsFactors = FALSE)
+rownames(mean_bins) <- c(28:1)
+mean_bins
+
+### visualizing:
+plot(rownames(mean_bins), mean_bins$log_odcl, xlim=c(28,0), xlab="time bins", ylab="mean log_odcl", pch=16, col="blue")
+### This allowed us to have an idea of the overall pattern of average body size of crocs through time
+### pch is a cod of the shape of each point, 17 is triagle, 18 is a losang and 16 is circles
+
+##############################################################################
+
+### Importing abiotic (temperature) data
+
+### The temperature data comes from Prokoph et al. (2008) and is represented by a proxy: delta O18
+### the lowest the temperature, the highest the delta O18 value.
+### temperature data from Prokoph et al. (2008) is divided into data collected from different latitudes.
+### for our analyses, let's use data from temperate latitudes.
+
+### Importing and visualising temperature data:
+prokoph_temp <- read.table("Prokoph_temperature_temperate.txt")
+### plotting:
+plot(prokoph_temp[,1], prokoph_temp[,2],pch=16, col="blue", xlab="time Ma", ylab="d18O", xlim=c(230,0), ylim=c(-8,4))
+
+### The temperature data was already subdivided into time bins
+### values are weighted mean values for each time bin
+prokoph_temp_binned <- read.table("Prokoph_temperature_bin.txt")
+plot(prokoph_temp_binned[,1], prokoph_temp_binned[,2],pch=16, col="red", xlab="time bins", ylab="d18O", xlim=c(28,0), ylim=c(-3.5,1.5))
+plot(prokoph_temp_binned[,1], prokoph_temp_binned[,2],pch=16, col="purple", xlab="time bins", ylab="d18O", xlim=c(28,0), ylim=c(-3.5,1), type = "l")
+
+### Now, let's include temperature data into the data frame:
+data_size_crocs <- data.frame("Average size" = mean_bins$log_odcl, "Temperature" = prokoph_temp_binned$V2, "oldest boundary" = int.times$first.int, "earliest boundary" = int.times$last.int)
+print(data_size_crocs)
+class(data_size_crocs)
+str(data_size_crocs) # 28 objects (the )
+### note that we don't have temperature data for the first 5 intervals, we will need to remove those first 5 before the regression analyses
+### excluding lines (1 to 5) for which we don't have temperature or body size data
+data_size_crocs <- data_size_crocs[-c(1:5),] # excludes first 5 lines
+length(data_size_crocs[,1]) # 23 time bins
+
+##############################################################################
+
+### Regressions
+### First, let's use OLS (the simplest regression), using function "lm()"
+### this function uses a formula (y ~ x), where y is the dependent and x is the independent variable
+### check the itens in data_size_crocs using $ + tab 1) Avarage.size | 2) Temperature | 3) oldest.boundary | 4) earlist.boundary
+ols_model <- lm(data_size_crocs$Average.size ~ data_size_crocs$Temperature)
+### let's use function "summary()" for looking into results
+summary(ols_model)
+head(ols_model)
+class(ols_model)
+str(ols_model)
+
+### The summary table is important. It has all the information we need to report in publications.
+### 1) the p-value: 0.5291. It is not significant | 2) the R squared: -0.02758. It's very weak | 3) value slope: 0.02285 | 4) the intercept: 2.07942
+### Now, we can investigate the same relationship, but also incorporating an auto-regressive model,
+### For time series analyses.
+### We can do this using the "gls()" function, from "nlme" package:
+gls_model <- gls(Average.size ~ Temperature, correlation = corARMA(p = 1), data = data_size_crocs, method = "ML")
+summary(gls_model)
+
+### let's look at the results 1) p-value: 0.7558. non-significant 2) slope: 0.0119928 3) intercept: 2.0671422
+### Note that GLS regressions won't give us the R squared value.
+
+### But it gives us a coefficient that tells us how strong the auto-correlation is 1) Phi: 0.4121824. moderate autoregressive correlation
+## this moderate correlation might indicate that the regression with the auto regressive model
+# is the best (when compared to the simple OLS model)
+
+## To be sure about that, we need to compare the two models using the AIC scores
+
+## For that, let's use the "gls()" function without any model, to obtain the AIC scores
+# this should give us exactly the same results as the "lm()" function:
+
+#the same but using gls() to get AIC (comparative)
+ols_gls_model <- gls(Average.size ~ Temperature,
+                     data = data_size_crocs, method = "ML")
+summary(ols_gls_model)
+
+# Comparing AIC scores:
+anova(ols_gls_model,gls_model)
+
+## Indeed, the GLS with the auto-regressive model is "the best" fit (lower AIC score),
+# even though both regressions indicated that the relationship between mean size and temperature
+# is very weak.
+## But the AIC scores allow us to report only the results of the GLS regression...
+
+## Visualizing:
+plot(data_size_crocs$Average.size ~ data_size_crocs$Temperature)
+abline(ols_gls_model, col = "blue")
+abline(gls_model, col = "red")
+
+################################################################################################################
