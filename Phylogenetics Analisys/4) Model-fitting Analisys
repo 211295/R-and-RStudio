@@ -36,7 +36,8 @@ class(taxon_croc_size)
 head(taxon_croc_size)
 
 ### Dropping taxa from the tree for which we do not have data
-for (i in 1: length(five_trees)) {five_trees[[i]] <- dropPaleoTip(five_trees[[i]], five_trees[[i]]$tip.label[!(five_trees[[i]]$tip.label %in% names(taxon.lengths))])} # also a bit complicated...
+for (i in 1: length(five_trees)) {five_trees[[i]] <- dropPaleoTip(five_trees[[i]], five_trees[[i]]$tip.label[!(five_trees[[i]]$tip.label %in% names(taxon.lengths))])} 
+### also a bit complicated.
 
 ### Comparing:
 length(taxon_croc_size) # 195 taxa
@@ -69,13 +70,13 @@ start <- Sys.time()
 ### the "fitContinuous()" needs the data, the tree and the model, you can inspect in help
 for(i in 1: length(five_trees)) {results[[i]] <- list()
   for(j in 1: length(models)) results[[i]][[j]] <- fitContinuous(five_trees[[i]], taxon_croc_size, model=models[[j]])} 
+### Its take a time
 ### Stop the clock!:
 end <- Sys.time()
-
 ### How long did it take?:
 end - start # in my computer, it took
 
-### luckily, the function accepted our "new_data" object as 'numeric and run it smoothly
+### Luckily, the function accepted our "new_data" object as 'numeric and run it smoothly
 ### some functions will only take data frames...
 ### also, if there are some warnings, it might be worth inspecting them, but they are usually okay...
 
@@ -96,3 +97,70 @@ for(i in 1:length(results)) {names(results[[i]]) <- models}
 results[[1]]$BM
 results[[1]]$OU
 results[[1]]$mean_trend
+
+############################################################################
+### Now we can get the AICc (scores for all models and all trees using the model names)(look for Regression tutorial):
+### AICc scores:
+### OU
+OU_Aicc <- list()
+for(i in 1:length(results)) {OU_Aicc[[i]] <- results[[i]]$OU$opt$aicc}
+
+### BM
+BM_Aicc <- list()
+for(i in 1:length(results)) {BM_Aicc[[i]] <- results[[i]]$BM$opt$aicc}
+
+### trend
+trend_Aicc <- list()
+for(i in 1:length(results)) {trend_Aicc[[i]] <- results[[i]]$mean_trend$opt$aicc}
+
+### let's look at these objects we created with the AICc scores, it's means 
+print(BM_Aicc) # this is a list of 5 AICc scores, one for each tree (using the BM model)
+print(OU_Aicc) # the same for the OU model
+print(trend_Aicc) # trend model
+
+### Now, what we want is to compare the fit of different models for the same trees.
+### A way of doing this is using boxplots to compare the AICc scores of all trees and models
+
+### Let's create a data frame with the AICc scores for all models and all trees
+AICc_total <- do.call(rbind, Map(data.frame, BM=BM_Aicc, OU=OU_Aicc, trend=trend_Aicc))
+AICc_total
+
+### Let's visualize the results using boxplots of the AICc scores
+boxplot(AICc_total)
+ggplot(AICc_total, aes(x=names, y=c(-70,-20))) + geom_violin(trim=TRUE)
+
+### As I said, lower AICc scores indicate better fit. So, let's reverse the y axis:
+boxplot(AICc_total, ylim=c(-70,-20))
+ggplot(AICc_total, aes(x=names, y=c(-20,-70))) + geom_violin(trim=FALSE)
+
+### Right. This plot shows that the OU model has better (ie. lower) AICc scores.The OU
+### So, the OU model is the best (at least among the ones we tested), and can explain our data better
+### As I said, ideally we should use many more trees ( ~100) to be more confident about this result
+### But 5 trees was good for doing this exercise
+
+### Now let's save the results
+### First, the entire results of the model fitting analyses (with all the parameters and other stuff)
+dput(results, file = "Results fitContinuous mbl, ODCL, croc_tree.txt")
+### If want to import file results <- dget(file = "Results fitContinuous mbl, ODCL, croc_tree.txt")
+
+### Now, just the AICc scores (if we want to compare them with other models latter, for example)
+dput(AICc_total, file = "AICc scores mbl, ODCL, croc_tree.txt")
+### If want to import file AICc_total<-dget(file = "AICc scores mbl, ODCL, croc_tree.txt")
+
+##############################################################################
+
+### Now it's on you!
+### Exercise number 1
+
+### Try to use the same data to fit a non-uniform model
+### In this case, I think the easiest one is the non-uniform OU model fit called "SURFACE"
+### there is a package called "surface" and also good documentation and an online tutorial
+
+### obs: SURFACE analyses can take very, very long.
+### So, maybe try fitting the model using only 2 trees (just to see if it works)
+
+### Another cool option is using package OUwie, which also fits many non-uniform variations of the BM and the OU models
+### Finally, another option is package MVmorph, also with variations of the BM and OU models.
+### Give these packages a try!
+
+### Any problem, just let me know!
