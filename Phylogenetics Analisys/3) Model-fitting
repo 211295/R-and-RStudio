@@ -181,3 +181,405 @@ str(data_size_crocs) # 28 objects (the )
 ### excluding lines (1 to 5) for which we don't have temperature or body size data
 data_size_crocs <- data_size_crocs[-c(1:5),] # excludes first 5 lines
 length(data_size_crocs[,1]) # 23 time bins
+
+##############################################################################
+
+### Regressions
+### First, let's use OLS (the simplest regression), using function "lm()"
+### this function uses a formula (y ~ x), where y is the dependent and x is the independent variable
+### check the itens in data_size_crocs using $ + tab 1) Avarage.size | 2) Temperature | 3) oldest.boundary | 4) earlist.boundary
+ols_model <- lm(data_size_crocs$Average.size ~ data_size_crocs$Temperature)
+### let's use function "summary()" for looking into results
+summary(ols_model)
+head(ols_model)
+class(ols_model)
+str(ols_model)
+
+### The summary table is important. It has all the information we need to report in publications.
+### 1) the p-value: 0.5291. It is not significant | 2) the R squared: -0.02758. It's very weak | 3) value slope: 0.02285 | 4) the intercept: 2.07942
+### Now, we can investigate the same relationship, but also incorporating an auto-regressive model,
+### For time series analyses.
+### We can do this using the "gls()" function, from "nlme" package:
+gls_model <- gls(Average.size ~ Temperature, correlation = corARMA(p = 1), data = data_size_crocs, method = "ML")
+summary(gls_model)
+
+### let's look at the results 1) p-value: 0.7558. non-significant 2) slope: 0.0119928 3) intercept: 2.0671422
+
+## Note that GLS regressions won't give us the R squared value.
+
+## But it gives us a coefficient that tells us how strong the auto-correlation is:
+# Phi: 0.4121824. moderate autoregressive correlation
+
+## this moderate correlation might indicate that the regression with the auto regressive model
+# is the best (when compared to the simple OLS model)
+
+## To be sure about that, we need to compare the two models using the AIC scores
+
+## For that, let's use the "gls()" function without any model, to obtain the AIC scores
+# this should give us exactly the same results as the "lm()" function:
+
+#the same but using gls() to get AIC (comparative)
+ols_gls_model <- gls(Average.size ~ Temperature,
+                     data = data_size_crocs, method = "ML")
+summary(ols_gls_model)
+
+
+# Comparing AIC scores:
+anova(ols_gls_model,gls_model)
+
+
+## Indeed, the GLS with the auto-regressive model is "the best" fit (lower AIC score),
+# even though both regressions indicated that the relationship between mean size and temperature
+# is very weak.
+## But the AIC scores allow us to report only the results of the GLS regression...
+
+
+## Visualizing:
+plot(data_size_crocs$Average.size ~ data_size_crocs$Temperature)
+abline(ols_gls_model, col = "blue")
+abline(gls_model, col = "red")
+
+
+
+
+##############################################################################
+##############################################################################
+##############################################################################
+
+## Now it's on you!
+
+# Exercise number 1
+
+#  use the same body size and temperature data and run correlation tests (Pearson, Spearman and/or Kendall)
+
+
+### SOLUTION:
+
+# You can run correlation tests using the function 'cor.test()'
+# You can use this function to run all three types of correlation tests (Pearson, Spearman and/or Kendall)
+# Let's take a look at the "Help" tab for this function
+
+# It needs x (the independent variable; in this case, the temperature data) and y (the dependent variable; body size)
+# It also uses the argument "method", which we can use for choosing between "pearson", "kendall" and "spearman"
+
+# But before we we go ahead and run the tests, let's remember that the "Pearson" test assumes that your data is normally distributed
+# To make sure our data follows a normal distribution, we need to test it
+
+# And for testing if a dataset follows a normal distribution, we can use function 'shapiro.test()'
+
+# Let's perform the Shapiro test (normality test) on the body size data:
+
+shapiro.test(data_size_crocs$Average.size)
+
+# The null hypothesis of the Shapiro test is that the data is normally distributed.
+# For the body size data, the p-value is 0.04928.
+# This means that it rejects the null hypothesis. In other words, the data is NOT normally distributed
+
+# Let's do the same for the temperature data:
+
+shapiro.test(data_size_crocs$Temperature)
+
+# The p-value is 0.6096, so it does not reject the null hypothesis (ie. the data is normally distributed).
+
+# But the Pearson correlation test requires that both variables follow a normal distribution
+# So, we should not use Pearson in this case.
+
+# Right, so let's run the tests with "kendall" and "spearman"
+
+test_kendall <- cor.test(data_size_crocs$Temperature, data_size_crocs$Average.size, method = "kendall")
+
+# It worked. Let's look at it:
+
+test_kendall
+
+# p-value is p-value = 0.2483, so it's a non-significant relationship.
+# But even if it was significant, the coefficient (tau) of  0.1778656 shows a very week correlation (close to zero)
+
+# Let's do the same with "spearman":
+
+test_spearman <- cor.test(data_size_crocs$Temperature, data_size_crocs$Average.size, method = "spearman")
+
+test_spearman
+
+# As expected, similar results.
+# Low correlation coefficient (rho): 0.277668
+# And non-significant p-value: 0.1989
+
+
+
+
+##############################################################################
+##############################################################################
+##############################################################################
+
+## Now, let's use PGLS, which incorporates phylogenetic information
+
+## for that, let's import all the data again
+
+
+## We will use the following objects (already loaded and checked previously):
+dat2
+ttrees
+dages
+
+# just double-checking if the number of taxa match
+length(dat2[,1]) # 195 taxa
+Ntip(ttrees[[1]]) # 195 taxa
+length(dages$FAD) # 195 taxa
+
+
+## First, let's import the body size data again:
+dat <- read.table("croc_sizes.txt", header=T)
+
+## Now, let's also import a new file, with latitudinal information:
+
+latitude <- read.table("Palaeolatitude.txt", header=T)
+
+## Let's put body size data and latitude in a same file:
+ODCL_latitude <- dat
+ODCL_latitude[,3] <- latitude$Lat
+colnames(ODCL_latitude)[3] <- "Latitude"
+
+ODCL_latitude
+
+
+## We already have the 5 time-calibrated trees we need:
+ttrees
+
+## But, for now, let's select just one tree for PGLS (tree number 1):
+pgls_tree <- ttrees[[1]]
+
+
+#calculating the mean value for multiple specimens
+taxon.list <- unique(ODCL_latitude$Taxon)
+taxon.lengths<-c()
+
+for(i in 1:length(taxon.list)) {taxon.lengths[i]<-mean(ODCL_latitude[ODCL_latitude$Taxon==taxon.list[i],
+                                                                     "log_odcl"])}
+names(taxon.lengths)<-taxon.list
+log_ODCL<-taxon.lengths
+
+
+#calculating the mean latitude for multiple specimens
+taxon.list.lat <- unique(ODCL_latitude$Taxon)
+taxon.lengths.lat<-c()
+
+for(i in 1:length(taxon.list.lat)) {taxon.lengths.lat[i]<-mean(ODCL_latitude[ODCL_latitude$Taxon==taxon.list.lat[i],
+                                                                             "Latitude"])}
+names(taxon.lengths.lat)<-taxon.list.lat
+Lat<-taxon.lengths.lat
+
+## everything in a same data frame again:
+ODCL_latitude<-data.frame("Taxon" = names(log_ODCL), "log_ODCL" = unname(log_ODCL, force = F), "Lat" = unname(Lat, force = F))
+ODCL_latitude
+
+## Let's plot body size against latitude (to look for any pattern):
+plot(ODCL_latitude$log_ODCL ~ ODCL_latitude$Lat)
+
+## It doesn't look very promising...
+
+##############################################################################
+
+## Now, the regressions:
+
+## First, the simple OLS:
+ols_model_lat<-lm(log_ODCL ~ Lat, data = ODCL_latitude)
+summary(ols_model_lat)
+
+## It shows an almost significant correlation (p-value = 0.05985),
+# but weak (R squared = 0.01314)
+
+## Now, the PGLS, that incorporates the phylogeny.
+# For that, let's use the "pgls()" function, the "caper" package.
+# first, let's put the data in the right format for the function:
+ODCL_latitude2 <- comparative.data(pgls_tree, ODCL_latitude, Taxon, vcv=T, vcv.dim=3)
+
+# now, the pgls() function:
+pgls_model <- pgls(log_ODCL ~ Lat, ODCL_latitude2, lambda= "ML")
+summary(pgls_model)
+
+## This function also gives us a R squared (which can be useful, but problematic)
+# in this case, the correlation is significant (p-value = 0.03048),
+# but still weak (R squared = 0.01897)
+
+## If we want to compare both regressions, we need, once more, to get the AIC for the OLS using the gls() function:
+ols_gls_model_lat<-gls(log_ODCL ~ Lat, data = ODCL_latitude,
+                      method = "ML")
+sum_ols<-summary(ols_gls_model_lat)
+
+## We cannot use the "anova()" function
+# but we can get the AIC scores for both regressions:
+
+## OLS
+sum_ols$AIC
+
+## PGLS
+pgls_model$aic
+
+
+## The PGLS fits better our data (lower AIC scores), and we can report the results from this regression only.
+
+## Visualizing:
+plot(ODCL_latitude$log_ODCL ~ ODCL_latitude$Lat)
+abline(ols_gls_model_lat, col = "blue")
+abline(pgls_model, col = "red")
+
+
+
+
+
+##############################################################################
+##############################################################################
+##############################################################################
+
+## Now it's on you!
+
+# Exercise number 2
+
+# use data loaded below, evaluate the relationship between ecology (habitat) and body size in croodylomorphs.
+
+#Read the body size data
+data_habitats<-read.table("croc_size_habitats.txt",header=T)
+
+# let's quickly look at the data using boxplots
+boxplot(log_ODCL ~ Aquaticness, data = data_habitats)
+
+# Aquatic species look larger on average than the other two ecologies/habitats
+# But is it significant?
+
+# Investigate this using a phylogenetic ANOVA (there are multiple functions/packages that can do this)
+
+
+### SOLUTION:
+
+
+### First, let's import the trees and remove taxa for which we don't have data
+# if you already have the trees (or one tree), you don't need to import them and/or remove the taxa)
+
+
+# loading tree:
+trees<-dget(file = "croc tree, 20 trees, mbl method.txt")
+# removing taxa:
+for (i in 1: length(trees)) {
+  trees[[i]] <- dropPaleoTip(trees[[i]],
+                             trees[[i]]$tip.label[!(trees[[i]]$tip.label %in% data_habitats$Taxon)])}
+
+
+
+# let's select only one tree to make it faster:
+
+tree_number1 <- trees[[1]]
+
+
+# now, we can run a phylogenetic ANOVA using different functions, from different packages
+# the most used is the function 'phylANOVA()' from the package "phytools"
+
+# so, let's load package phytools
+
+library(phytools)
+
+
+# now, let's try to use function 'phylANOVA()'.
+# if you search for this function in the "Help" tab, it will explain what you need.
+# first, we need a tree (and we already have it)
+# second, we need 'x', which is "a vector containing the group" (this is the "aquaticness" of the species)
+# third, we need 'y', which is "a vector containing the response variable" (this is the body size data)
+# fourth, we need the number of simulations (nsim), which is usually more than 1000, but we'll use only 100 to make it faster
+# fifth, but not mandatory, we can use a method to adjust (ie. correct) the p-value. The "Bonferroni" method good choice.
+
+
+# Right, let's try!
+
+anova_phy <- phylANOVA(tree_number1, data_habitats$Aquaticness, data_habitats$log_ODCL, nsim = 100, p.adj = "bonferroni")
+
+# It worked, but there were warning messages:
+# "Warning: no labels for x. Assuming order of tree$tip.label.
+#   Warning: no labels for y. Assuming order of tree$tip.label."
+
+# This warning indicates that there is something wrong with our groups ("aquaticness") and data (body size data)
+# Let's take a look at them:
+
+data_habitats$Aquaticness
+data_habitats$log_ODCL
+
+# The problem is that they don't show the species/taxa names, so the function don't know how to match these with the species in the tree
+
+# To solve this, we need to add the species names to the groups and data
+# We can do this creating new objects for the groups and data
+# But another important thing to do is double checking what the documentation of the package says in the "Help" tab
+# For both the groups ('x') and data ('y') it says that they have to be a vector
+# So, to make sure we are creating vectors, let's use the function 'as.vector()':
+
+groups <- as.vector(data_habitats$Aquaticness)
+size_data <- as.vector(data_habitats$log_ODCL)
+
+# Right, now we are sure that these two objects are vectors (as the function requires), but they still don't have the species names
+# We know that the first column of the 'data_habitats' object has the species names
+# And this first column is called "Taxon". We can check this by running the following:
+data_habitats$Taxon
+
+# So, let's add the names (from data_habitats$Taxon) using the function 'names()':
+# And we
+
+names(groups) <- data_habitats$Taxon
+names(size_data) <- data_habitats$Taxon
+
+
+# Great! Now it should work:
+
+
+anova_phy  <- phylANOVA(tree_number1, groups, size_data, nsim = 100, p.adj = "bonferroni")
+
+## IT WORKED!
+
+# let's check the results:
+anova_phy # looks like none of the ecological groups are significantly different from one another
+
+######
+
+## There's another option for doing it, which is the function 'lm.rrpp()' from the package "RRPP"
+# SO, let's load "RRPP" (if you don't have this package, install it using the "Packages" tab):
+
+
+library(RRPP)
+
+# First thing, let's take a look at the "Help" tab for the function 'lm.rrpp()'
+# It needs a formula and the number of iterations/simulations
+# But what is the formula?
+# The formula is usually "dependent variable (y) ~ independent variable (x)"
+# So, in our case, the formula should be "size_data ~ groups"
+# for the number of simulations, let's use 100 again
+# finally, this is supposed to be a phylogenetic anova, right?
+# But where is the phylogenetic information?
+# We need to incorporate the phylogenetic information using argument "Cov", the covariance matrix
+
+# See below
+
+phylo_anova_lm.rrpp  <- lm.rrpp(size_data ~ groups, Cov = vcv.phylo(tree_number1), iter = 100)
+
+# It seems like it worked!
+# Let's inspect the results:
+phylo_anova_lm.rrpp # Cool, but this is not what we need. Let's try using "summary()"
+
+summary(phylo_anova_lm.rrpp) # still not exactly what we need...
+
+# We need pairwise comparisons, to be sure that the groups are or not significantly different from one another
+
+# so, let's use "summary()" in combination with "pairwise()" (another function from the same package)
+summary(pairwise(phylo_anova_lm.rrpp, groups = groups), test.type = "dist", show.vectors = TRUE)
+
+
+# Well, this shows different results!
+# Looks like terrestrial crocs are significantly smaller than both aquatic and semi-aquatic ones
+# Function 'lm.rrpp()' uses a different method (permutation procedure) from that of phylANOVA (simulations)
+# You can read more about it in
+
+# Adams DC & Collyer ML (2018) Phylogenetic ANOVA: Group-clade aggregation, biological challenges,
+# and a refined permutation procedure. Evolution, https://doi.org/10.1111/evo.13492.
+
+# And
+
+# Collyer ML & Adams DC (2018) RRPP: An r package for fitting linear models to high‐dimensional data
+# using residual randomization. Methods in Ecology and Evolution, https://doi.org/10.1111/2041-210X.13029.
+
+# That's all folks!
