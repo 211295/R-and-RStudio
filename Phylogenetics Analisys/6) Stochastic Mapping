@@ -6,8 +6,78 @@ if(!require(evobiR)){install.packages("evobiR");library(evobiR)}
 
 ### Read tree
 elopo_tree<-read.tree("elopomorph_tree.tre")
+head(elopo_tree)
 
 ### Read data and name states
-X<-read.csv("elopomorph_data.csv",row.names=1)
-elopo_data<-setNames(X[,1],rownames(X))
+elopo_csv<-read.csv("elopomorph_data.csv",row.names=1)
+str(elopo_csv)
+elopo_data<-setNames(elopo_csv[,1],rownames(elopo_csv))
+head(elopo_data)
 elopo_data<-as.factor(elopo_data)
+summary(elopo_data)
+
+### Plot tree and tip states to visualize their distribution
+### Try to use help in plotTree, and after change to plot.phyl. Change the type for the options described (e.g. phylogram, radical, cladogram)
+plotTree(elopo_tree,type="fan",fsize=0.5,ftype="i",lwd=1.5,offset=-0.01)
+colors <-setNames(c("red","blue"),levels(elopo_data))
+tiplabels(pie=to.matrix(elopo_tree[elopo_tree$tip.label],levels(elopo_data)),piecol=colors,cex=0.2)
+legend(x="bottomleft", levels(elopo_data), cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+	
+### Marginal estimation of ancestral states
+
+### adjusting data
+data_feed_mode_elopo<-data.frame(rownames(elopo_csv),elopo_csv$feed_mode)
+
+### ER (equals rate), you can see in Ancestral States Script
+HMM_ER2<-corHMM(_______,data_feed_mode_elopo,model="ER",rate.cat=1,node.states="marginal")
+HMM_ER2
+plotTree(_______,fsize=0.6,ftype="i",lwd=1)
+nodelabels(node=1:tr2$Nnode+Ntip(tr2),pie=m_ER2$states,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(dat2[tr2$tip.label],levels(dat2)),piecol=cols,cex=0.15)
+legend(x="bottomleft", levels(dat2), cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+title("Marginal ER",line = -0.7)
+
+#ARD
+HMM_ARD2<-corHMM(tr2,data_feed_mode_elopo,model="ARD",rate.cat=1,node.states="marginal")
+HMM_ARD2
+plotTree(tr2,fsize=0.6,ftype="i",lwd=1)
+nodelabels(node=1:tr2$Nnode+Ntip(tr2),pie=m_ARD2$states,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(dat2[tr2$tip.label],levels(dat2)),piecol=cols,cex=0.15)
+legend(x="bottomleft", levels(dat2), cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
+title("Marginal ARD",line = -0.7)
+
+Models<-c("ER","ARD")
+AICc2<-c(HMM_ER2$AICc,HMM_ARD2$AICc)
+AICw<-as.vector(aic.w(AICc2))
+Summary_marginal<-data.frame(Models,AICc2,AICw)
+Summary_marginal
+
+### Stochastic character mapping
+### Perform 100 stochastic character mapping
+	scm_ER<-make.simmap(tr2,dat2,model="ER",nsim=100,pi="estimated",Q="empirical")
+	describe.simmap(scm_ER)
+	
+	scm_ARD<-make.simmap(tr2,dat2,model="ARD",nsim=100,pi="estimated",Q="empirical")
+	describe.simmap(scm_ARD)
+	
+### Plot all 100 maps
+	par(mfrow=c(10,10))
+	plot(scm_ER,cols,ftype="off")
+	
+### Plot a density summary summarizing plotting uncertainty
+	par(mfrow=c(1,1))
+	densityMap(scm_ER,states=levels(dat2)[2:1],plot=FALSE)->density
+	plot(density,fsize=c(0.5,0.6))
+	
+### Perform 100 stochastic character mapping - with a root prior
+	scm_c<-make.simmap(tr2,dat2,model="ER",nsim=100,pi=c(0.05,0.95),Q="empirical")
+	describe.simmap(scm_c)
+	
+### Plot all 100 maps
+	par(mfrow=c(10,10))
+	plot(scm_c,cols,ftype="off")
+	
+### Plot a density summary summarizing plotting uncertainty
+	par(mfrow=c(1,1))
+	densityMap(scm_c,states=levels(dat2)[2:1],plot=FALSE)->density
+	plot(density,fsize=c(0.5,0.6))		
