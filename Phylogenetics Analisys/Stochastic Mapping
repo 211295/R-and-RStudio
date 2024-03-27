@@ -1,0 +1,13 @@
+### Load packages
+if(!require(corHMM)){install.packages("corHMM");library(corHMM)}
+if(!require(phytools)){install.packages("phytools");library(phytools)}
+if(!require(phangorn)){install.packages("phangorn");library(phangorn)}
+if(!require(evobiR)){install.packages("evobiR");library(evobiR)}
+
+### Read tree
+elopo_tree<-read.tree("elopomorph_tree.tre")
+
+### Read data and name states
+X<-read.csv("elopomorph_data.csv",row.names=1)
+elopo_data<-setNames(X[,1],rownames(X))
+elopo_data<-as.factor(elopo_data)
