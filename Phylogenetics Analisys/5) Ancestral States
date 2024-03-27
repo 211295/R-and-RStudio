@@ -96,31 +96,25 @@ legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n
 title("Joint SYM",line = -0.7)
 
 ### Model "All Rates Different" (ARD)
-j_ARD<-corHMM(tr,dat,model="ARD",rate.cat=1,node.states="joint")
-j_ARD
-st<-j_ARD$states
-pies<-matrix(nrow=length(st),ncol=length(states))
-for(i in 1:length(st))
-{
-	for (j in 1:length(states))
-	{ 
-		if (st[i]==n_state[j]){
-		pies[i,j]<-1
-		} else {
-		pies[i,j]<-0
-		}
-	}
-}
-tip_data<-as.factor(setNames(dat[,2],dat[,1]))
-plotTree(tr,fsize=0.5,ftype="i",lwd=1)
-nodelabels(node=1:tr$Nnode+Ntip(tr),pie=pies,piecol=cols,cex=0.3)
-tiplabels(pie=to.matrix(tip_data[tr$tip.label],levels(tip_data)),piecol=cols,cex=0.15,offset=-0.01)
+joint_ARD<-corHMM(anolis_tree,anolis_data,model="ARD",rate.cat=1,node.states="joint")
+joint_ARD
+state_joint_ARD<-joint_ARD$states
+pies<-matrix(nrow=length(state_joint_ARD),ncol=length(states))
+for(i in 1:length(state_joint_ARD)) {	for (j in 1:length(states)) { if (state_joint_ARD[i]==n_state[j]){pies[i,j]<-1}  
+  else {pies[i,j]<-0} } }
+tip_anolis5<-as.factor(setNames(anolis_data[,2],anolis_data[,1]))
+plotTree(anolis_tree,fsize=0.4,ftype="i",lwd=1.5)
+nodelabels(node=1:anolis_tree$Nnode+Ntip(anolis_tree),pie=pies,piecol=cols,cex=0.3)
+tiplabels(pie=to.matrix(tip_anolis5[anolis_tree$tip.label],levels(tip_anolis5)),piecol=cols,cex=0.15,offset=-0.01)
 legend(x="bottomleft", states, cex=0.8, pt.cex=1.5, pch=21, pt.bg = cols, bty="n")
 title("Joint ARD",line = -0.7)
 
-###Summarize model-fit information AICc and AICw for JOINT estimations
+### Summarize model-fit information AICc and AICw for JOINT estimations
 Models<-c("ER","SYM","ARD")
-AICc<-c(j_ER$AICc,j_SYM$AICc,j_ARD$AICc)
+AICc<-c(joint_ER$AICc,joint_SYM$AICc,joint_ARD$AICc)
 AICw<-as.vector(aic.w(AICc))
 Summary_joint<-data.frame(Models,AICc,AICw)
-Summary_joint
+print(Summary_joint)
+### Now you have a little table with AICc with 161.7256, 184.5896 and 234.7971, respectively ER, SYM and ARD
+### And AICw 9.999892e-01, 1.084273e-05 and 1.357427e-16 , respectively ER, SYM and ARD
+### This means ....
