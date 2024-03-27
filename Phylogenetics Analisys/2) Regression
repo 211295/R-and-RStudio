@@ -207,19 +207,17 @@ summary(gls_model)
 
 ### But it gives us a coefficient that tells us how strong the auto-correlation is 1) Phi: 0.4121824. moderate autoregressive correlation
 ## this moderate correlation might indicate that the regression with the auto regressive model
-# is the best (when compared to the simple OLS model)
+### is the best (when compared to the simple OLS model)
 
-## To be sure about that, we need to compare the two models using the AIC scores
+### To be sure about that, we need to compare the two models using the AIC scores
 
-## For that, let's use the "gls()" function without any model, to obtain the AIC scores
-# this should give us exactly the same results as the "lm()" function:
+### For that, let's use the "gls()" function without any model, to obtain the AIC scores this should give us exactly the same results as the "lm()" function:
 
-#the same but using gls() to get AIC (comparative)
-ols_gls_model <- gls(Average.size ~ Temperature,
-                     data = data_size_crocs, method = "ML")
+### the same but using gls() to get AIC (comparative)
+ols_gls_model <- gls(Average.size ~ Temperature,data = data_size_crocs, method = "ML")
 summary(ols_gls_model)
 
-# Comparing AIC scores:
+### Comparing AIC scores:
 anova(ols_gls_model,gls_model)
 
 ### Indeed, the GLS with the auto-regressive model is "the best" fit (lower AIC score),
@@ -233,7 +231,6 @@ abline(ols_gls_model, col = "blue")
 abline(gls_model, col = "red")
 
 ################################################################################################################
-
 ### Exercise number 1
 ### Use the same body size (mean_bins$log_odcl) and temperature data (prokoph_temp_binned$V2) and run correlation tests (Pearson, Spearman and/or Kendall)
 ### You can run correlation tests using the function 'cor.test()', see help("cor.test")
@@ -379,4 +376,97 @@ plot(all_data$log_ODCL ~ all_data$Lat, xlab="Latitude", ylab="log_ODCL", pch=16,
 abline(ols_gls_model_lat, col = "blue")
 abline(pgls_model, col = "red")
 
-###########################################################################################################################################################
+##############################################################################
+### Exercise number 2
+### Use data loaded below, evaluate the relationship between ecology (habitat) and body size in croodylomorphs.
+### Read the body size data
+data_habitats<-read.table("croc_size_habitats.txt",header=T)
+
+### let's quickly look at the data using boxplots
+boxplot(log_ODCL ~ Aquaticness, data = data_habitats, col="lightgreen")
+
+### Aquatic species look larger on average than the other two ecologies/habitats. But is it significant?
+### Investigate this using a phylogenetic ANOVA (there are multiple functions/packages that can do this)
+
+### SOLUTION:
+### First, let's import the trees and remove taxa for which we don't have data
+### if you already have the trees (or one tree), you don't need to import them and/or remove the taxa)
+
+### loading tree:
+trees<-dget(file = "croc tree, 20 trees, mbl method.txt")
+### removing taxa, using a :
+for (i in 1: length(trees)) {trees[[i]] <- dropPaleoTip(trees[[i]], trees[[i]]$tip.label[!(trees[[i]]$tip.label %in% data_habitats$Taxon)])}
+### let's select only one tree to make it faster, but you can do for every tree:
+tree_number1 <- trees[[1]]
+print(tree_number1)
+
+### Now, we can run a phylogenetic ANOVA using different functions, from different packages the most used is the function 'phylANOVA()' from the package "phytools". So, let's load package phytools
+if(!require(phytools)){install.packages("phytools");library(phytools)}
+
+### Now, let's try to use function 'phylANOVA()'. If you search for this function in the "Help" tab, it will explain what you need.
+### 1) A tree (already have it) | 2) The 'x' is "a vector containing the group" (this is the "aquaticness" of the species) | 3) The 'y' is "a vector containing the response variable" (this is the body size data)
+### 4) The number of simulations (nsim) is usually more than 1000, but can use only 100 to make it faster | 5) A method to adjust (i.e. correct) the p-value. The "Bonferroni" method is good choice.
+### Let's try!
+anova_phy <- phylANOVA(tree_number1, data_habitats$Aquaticness, data_habitats$log_ODCL, nsim = 100, p.adj = "bonferroni")
+### It worked, but there were warning messages:
+### "Warning: no labels for x/y. Assuming order of tree$tip.label.
+### This warning indicates that there is something wrong with our groups ("aquaticness") and data (body size data)
+
+### Let's take a look at them:
+print(data_habitats$Aquaticness)
+print(data_habitats$log_ODCL)
+
+### The problem is that they don't show the species/taxa names, so the function don't know how to match these with the species in the tree
+### To solve this, we need to add the species names to the groups and data. We can do this creating new objects for the groups and data
+### But another important thing to do is double checking what the documentation of the package says in the "Help" tab
+### For both the groups ('x') and data ('y') it says that they have to be a vector. So, to make sure we are creating vectors, let's use the function 'as.vector()':
+aquaticness_vector <- as.vector(data_habitats$Aquaticness)
+log_ODCL_vector <- as.vector(data_habitats$log_ODCL)
+
+### inspect:
+class(aquaticness_vector)
+str(aquaticness_vector)
+head(aquaticness_vector)
+summary(aquaticness_vector)
+
+### Right, now we are sure that these two objects are vectors (as the function requires), but they still don't have the species names
+### We know that the first column (called "Taxon") of the 'data_habitats' object has the species names. And this first column is called "Taxon". We can check:
+head(data_habitats)
+
+### So, let's add the names (from data_habitats$Taxon) using the function 'names()':
+### And we
+names(aquaticness_vector) <- data_habitats$Taxon
+names(log_ODCL_vector) <- data_habitats$Taxon
+
+### Now it should work:
+anova_phy  <- phylANOVA(tree_number1, aquaticness_vector, log_ODCL_vector, nsim = 100, p.adj = "bonferroni")
+
+### IT WORKED!
+### let's check the results:
+anova_phy # looks like none of the ecological groups are significantly different from one another
+
+### There's another option for doing it, which is the function 'lm.rrpp()' from the package "RRPP"
+### SO, let's load "RRPP" (if you don't have this package, install it using the "Packages" tab):
+if(!require(RRPP)){install.packages("RRPP");library(RRPP)}
+### Use "Help" tab for the function 'lm.rrpp()'
+
+### It needs a formula and the number of iterations/simulations, but what is the formula?
+### The formula is usually "dependent variable (y) ~ independent variable (x)", in our case, the formula should be "log_ODCL_vector ~ aquaticness_vector". For the number of simulations, let's use 100 again
+### Finally, where is the phylogenetic information? We need to incorporate the phylogenetic information using argument "Cov", the covariance matrix
+phylo_anova_lm.rrpp  <- lm.rrpp(log_ODCL_vector ~ aquaticness_vector, Cov = vcv.phylo(tree_number1), iter = 100)
+
+### It seems like it worked!
+### Let's inspect the results:
+head(phylo_anova_lm.rrpp) # Cool, but this is not what we need.
+summary(phylo_anova_lm.rrpp) # still not exactly what we need...
+
+### We need pairwise comparisons, to be sure that the groups are or not significantly different from one another
+### so, let's use "summary()" in combination with "pairwise()" (another function from the same package)
+summary(pairwise(phylo_anova_lm.rrpp, groups = aquaticness_vector), test.type = "dist", show.vectors = TRUE)
+
+
+### Well, this shows different results! Looks like terrestrial crocs are significantly smaller than both aquatic and semi-aquatic ones
+### Function 'lm.rrpp()' uses a different method (permutation procedure) from that of phylANOVA (simulations). You can read more about it in
+### Adams DC & Collyer ML (2018) Phylogenetic ANOVA: Group-clade aggregation, biological challenges, and a refined permutation procedure. Evolution, https://doi.org/10.1111/evo.13492.
+### And
+### Collyer ML & Adams DC (2018) RRPP: An r package for fitting linear models to high‐dimensional data, using residual randomization. Methods in Ecology and Evolution, https://doi.org/10.1111/2041-210X.13029.
