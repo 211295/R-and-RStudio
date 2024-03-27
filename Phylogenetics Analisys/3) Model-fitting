@@ -70,10 +70,7 @@ for(i in 1: length(five_trees)){five_trees[[i]] <- dropPaleoTip(treeOrig = five_
 length(my_new_data) # 195 taxa
 Ntip(five_trees[[1]]) # 195 taxa
 
-## Now, for the regression analyses, we will also need the "ages data" to contain the
-### same number of taxa (195)
-
-### originally, the 'ages" object has more taxa:
+### Now, for the regression analyses, we will also need the "ages data" to contain the, same number of taxa (195), originally, the 'ages" object has more taxa:
 str(ages) #305 taxa
 
 ### So, let's drop (remove) the other taxa from it:
@@ -103,7 +100,7 @@ taxarange <- binTimeData(drop_ages, int.times=timebins) # this is a function fro
 str(taxarange) # taxa are divided into 28 time bins
 taxicDivDisc(taxarange) # this shows the "diversity through time", function of "paleotree" libery, use help to understand
 
-# to know how many taxa (and which are they) for each of the 28 time bins:
+### to know how many taxa (and which are they) for each of the 28 time bins:
 taxon.times <- as.data.frame(taxarange$taxon.times)
 print(taxon.times)
 int.times <- as.data.frame(taxarange$int.times); colnames(int.times) <- c("first.int","last.int")
@@ -151,8 +148,7 @@ plot(rownames(mean_bins), mean_bins$log_odcl, xlim=c(28,0), xlab="time bins", yl
 ### This allowed us to have an idea of the overall pattern of average body size of crocs through time
 ### pch is a cod of the shape of each point, 17 is triagle, 18 is a losang and 16 is circles
 
-##############################################################################
-
+##################################################################################################################################
 ### Importing abiotic (temperature) data
 
 ### The temperature data comes from Prokoph et al. (2008) and is represented by a proxy: delta O18
@@ -182,7 +178,7 @@ str(data_size_crocs) # 28 objects (the )
 data_size_crocs <- data_size_crocs[-c(1:5),] # excludes first 5 lines
 length(data_size_crocs[,1]) # 23 time bins
 
-##############################################################################
+#########################################################################################################################################
 
 ### Regressions
 ### First, let's use OLS (the simplest regression), using function "lm()"
