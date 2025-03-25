@@ -57,3 +57,5 @@ print(data3)
 survival_proportion_by_sex = survfit(regression_data2, newdata = data3)
 # Plot the curvs by sex
 ggsurvplot(survival_proportion_by_sex, conf.int = TRUE, legend.labs=c("Sex=1", "Sex=2"), ggtheme = theme_minimal())
+
+############################################################################################################################### END ###############################################################################################################################
