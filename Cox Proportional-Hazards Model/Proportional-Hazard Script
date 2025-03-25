@@ -1,0 +1,59 @@
+### Study for Proportional-Hazard https://www.sthda.com/english/wiki/cox-proportional-hazards-model ### 
+### f(x)=x*exp(a.x1+b.x2+c.x3+...+z.xn) ###
+### Basically a exponential of sums with differents coefficients (a,b,c,...,z) ###
+### Start installing 2 packages
+if(!require(survival)){install.packages("survival");library(survival)}
+if(!require(survminer)){install.packages("survminer");library(survminer)}
+
+### R function to compute the Cox Model (coxph())
+# coxph(formula, data, method)
+# formula: is linear model with a survival object as the response variable. Survival object is created using the function Surv() as follow: Surv(time, event)
+# data: a data frame containing the variables
+# method: is used to specify how to handle ties. Examples 'efron' (default), ‘breslow’ and ‘exact’
+data("lung")
+# data from survival. explore the data
+head(lung)
+# or print(lung)
+# institute code | days survival | status live=1 or death=2 | age | sex Male=1 or Female=2 | ECOG performace good=0 to dead=5 | Karnofsky performace bad=0 to good=100 | Perception of K.p. by patient | Calories consumed at meals | Weight loss in last six months
+
+### Compute in Cox Model the 4th, 5th, 6th and the 10th (age, sex, ph.ecog and wt.loss, respectively)
+regression_data1 = coxph(Surv(time, status) ~ sex , data = lung)
+regression_data1
+summary(resume_data1)
+
+### Ways we can analysis: Statistical significance, The regression coefficients, Hazard ratios, Confidence intervals of the hazard ratios, Global statistical significance of the model.
+covariates = c("age", "sex",  "ph.karno", "ph.ecog", "wt.loss")
+first_analysis = sapply(covariates, function(x) as.formula(paste('Surv(time, status)~', x)))
+second_analysis = lapply(first_analysis, function(x){coxph(x, data = lung)})
+third_analysis <- lapply(second_analysis, function(x){x <- summary(x)
+                                                      p.value<-signif(x$wald["pvalue"], digits=2)
+                                                      wald.test<-signif(x$wald["test"], digits=2)
+                                                      beta<-signif(x$coef[1], digits=2);#coeficient beta
+                                                      HR <-signif(x$coef[2], digits=2);#exp(beta)
+                                                      HR.confint.lower <- signif(x$conf.int[,"lower .95"], 2)
+                                                      HR.confint.upper <- signif(x$conf.int[,"upper .95"],2)
+                                                      HR <- paste0(HR, " (", HR.confint.lower, "-", HR.confint.upper, ")")
+                                                      res<-c(beta, HR, wald.test, p.value)
+                                                      names(res)<-c("beta", "HR (95% CI for HR)", "wald.test", "p.value")
+                                                      return(res) 
+                                                      #return(exp(cbind(coef(x),confint(x))))
+                                                     })
+fourth_analysis = t(as.data.frame(third_analysiS, check.names = FALSE))
+as.data.frame(fourth_analysis)
+
+###
+regression_data2 <- coxph(Surv(time, status) ~ age + sex + ph.ecog, data =  lung)
+summary(regression_data2)
+
+
+### To visualize the predicted survival proportion at any given point in time for a particular risk group. survfit() fucntion estimates the survival proportion (default = mean values of covariates)
+# Plot the baseline survival function
+ggsurvplot(survfit(regression_data2), color = "#2E9FDF",ggtheme = theme_minimal())
+
+# impact of the sex on the estimated survival probability. Construct a new data_frame
+data3 = with(lung, data.frame(sex = c(1, 2), age = rep(mean(age, na.rm = TRUE), 2), ph.ecog = c(1, 1)))
+print(data3)
+### Data frame is passed to survfit() via the 'newdata' argument
+survival_proportion_by_sex = survfit(regression_data2, newdata = data3)
+# Plot the curvs by sex
+ggsurvplot(survival_proportion_by_sex, conf.int = TRUE, legend.labs=c("Sex=1", "Sex=2"), ggtheme = theme_minimal())
