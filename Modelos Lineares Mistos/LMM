@@ -1,5 +1,5 @@
 ###
-###
+### http://labtrop.ib.usp.br/doku.php?id=cursos:planeco:roteiro:11-lmm
 ###
 ### 
 ### pkgs <- c("lme4", "RVAideMemoire")
@@ -7,7 +7,7 @@
 ### install.packages(pkgsNot)
 
 ### Start with the liberies
-if(!require(lmer)){install.packages("lmer"); library(lmer)}
+if(!require(lme4)){install.packages("lme4"); library(lme4)}
 if(!require(RVAideMemoire)){install.packages("RVAideMemoire"); library(RVAideMemoire)}
 
 ### download the table "praias.csv" AND transpose to the work area
