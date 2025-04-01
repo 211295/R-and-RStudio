@@ -2,11 +2,23 @@
 ###
 ###
 ### 
+### pkgs <- c("lme4", "RVAideMemoire")
+### pkgsNot <- pkgs[!(pkgs %in% rownames(installed.packages()))]
+### install.packages(pkgsNot)
 
 ### Start with the liberies
-if(!require(lme4)){install.packages("lme4"); library(lme4)}
+if(!require(lmer)){install.packages("lmer"); library(lmer)}
 if(!require(RVAideMemoire)){install.packages("RVAideMemoire"); library(RVAideMemoire)}
 
-pkgs <- c("lme4", "RVAideMemoire")
-pkgsNot <- pkgs[!(pkgs %in% rownames(installed.packages()))]
-install.packages(pkgsNot)
+### download the table "praias.csv" AND transpose to the work area
+
+### start constructing the data
+praias <- read.table("praias.csv", header = TRUE, sep = "\t" , as.is = TRUE)
+# check the data
+str(praias)
+head(praias)
+
+### Trasnform a collumn in two categories (ex: low, high)
+praias$fExposure <- factor(praias$fExp, levels = c("low", "high"))
+### Lets understand the model
+model <- lmer(Richness ~ NAP +  (1 | Beach), data = praias)
