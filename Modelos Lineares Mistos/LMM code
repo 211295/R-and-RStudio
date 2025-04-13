@@ -22,3 +22,4 @@ head(praias)
 praias$fExposure <- factor(praias$fExp, levels = c("low", "high"))
 ### Lets understand the model
 model <- lmer(Richness ~ NAP +  (1 | Beach), data = praias)
+summary(model)
