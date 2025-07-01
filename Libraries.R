@@ -40,6 +40,7 @@ if(!require(OUwie)){install.packages("OUwie",repos="https://cloud.r-project.org"
 if(!require(phangorn)){install.packages("phangorn",repos="https://cloud.r-project.org",quiet=FALSE);library(phangorn)}
 if(!require(ggmsa)){install.packages("ggmsa");library(ggmsa)} # https://yulab-smu.top/ggmsa/
 # if(!requireNamespace("devtools", quietly=TRUE)){install.packages("devtools");library(devtools)}
+# devtools::install_github("YuLab-SMU/ggmsa")
 
 packageVersion("ggplot2"); packageVersion("phytools"); packageVersion("phangorn") 
 packageVersion("OUwie"); packageVersion("nlme"); packageVersion("geiger"); packageVersion("diversitree")
