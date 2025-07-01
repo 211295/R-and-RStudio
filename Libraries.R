@@ -38,6 +38,8 @@ if(!require(geiger)){install.packages("geiger",repos="https://cloud.r-project.or
 if(!require(nlme)){install.packages("nlme",repos="https://cloud.r-project.org",quiet=TRUE);library(nlme)}
 if(!require(OUwie)){install.packages("OUwie",repos="https://cloud.r-project.org",quiet=FALSE);library(OUwie)}
 if(!require(phangorn)){install.packages("phangorn",repos="https://cloud.r-project.org",quiet=FALSE);library(phangorn)}
+if(!require(ggmsa)){install.packages("ggmsa");library(ggmsa)} # https://yulab-smu.top/ggmsa/
+# if(!requireNamespace("devtools", quietly=TRUE)){install.packages("devtools");library(devtools)}
 
 packageVersion("ggplot2"); packageVersion("phytools"); packageVersion("phangorn") 
 packageVersion("OUwie"); packageVersion("nlme"); packageVersion("geiger"); packageVersion("diversitree")
